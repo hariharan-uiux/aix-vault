@@ -6,7 +6,7 @@ import { VaultApp } from "@/components/vault-app";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, KeyRound } from "lucide-react";
 
 function AdminLoginPage() {
@@ -159,6 +159,19 @@ function AdminLoginPage() {
 
 export default function AdminPage() {
   const { isAdmin } = useVault();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return <AdminLoginPage />;

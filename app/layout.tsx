@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -19,6 +18,8 @@ export const metadata: Metadata = {
   description: "A minimal directory of developer and design tools.",
 };
 
+const themeScript = `(function(){try{var raw=localStorage.getItem('aix-vault:v2')||localStorage.getItem('aix-vault:v1');var t=null;if(raw){try{t=JSON.parse(raw).theme}catch(e){}}if(!t){t=localStorage.getItem('aix-vault:theme')}if(t==='light'||t==='dark'){document.documentElement.classList.toggle('dark',t==='dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})()`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -27,11 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <head>
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
+        <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var raw=localStorage.getItem('aix-vault:v2')||localStorage.getItem('aix-vault:v1');var t=null;if(raw){try{t=JSON.parse(raw).theme}catch(e){}}if(!t){t=localStorage.getItem('aix-vault:theme')}if(t==='light'||t==='dark'){document.documentElement.classList.toggle('dark',t==='dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})()`,
+            __html: themeScript,
           }}
         />
       </head>

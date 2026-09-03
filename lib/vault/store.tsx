@@ -37,6 +37,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -78,7 +79,7 @@ function readInitial(): Persisted {
     collections: [],
     collectionResources: [],
     saveCounts: {},
-    theme: "light",
+    theme: "dark",
     role: "user",
     customCategories: [],
     deletedCategoryIds: [],
@@ -129,7 +130,7 @@ function readInitial(): Persisted {
       deletedCategoryIds: storedDeletedCatIds,
       customResourceTypes: storedCustomTypes,
       deletedResourceTypeIds: storedDeletedTypeIds,
-      theme: parsed.theme === "light" || parsed.theme === "dark" ? parsed.theme : "light",
+      theme: parsed.theme === "light" || parsed.theme === "dark" ? parsed.theme : "dark",
       role: initialRole,
     };
   } catch {
@@ -245,23 +246,15 @@ type VaultContextValue = {
 const VaultContext = createContext<VaultContextValue | null>(null);
 
 export function VaultProvider({ children }: { children: ReactNode }) {
-  const initial = useMemo(() => readInitial(), []);
-  const [extras, setExtras] = useState<Resource[]>(initial.extras);
-  const [deletedIds, setDeletedIds] = useState<string[]>(initial.deletedIds);
-  const [deletedCollectionIds, setDeletedCollectionIds] = useState<string[]>(
-    initial.deletedCollectionIds || [],
-  );
-  const [savedIds, setSavedIds] = useState<string[]>(initial.savedIds);
-  const [collections, setCollections] = useState<Collection[]>(initial.collections);
-  const [collectionResources, setCollectionResources] =
-    useState<CollectionResource[]>(initial.collectionResources);
-  const [categories, setCategoriesState] = useState<Category[]>(() =>
-    getAllCategories(initial.customCategories, initial.deletedCategoryIds),
-  );
-  const [resourceTypes, setResourceTypesState] = useState<ResourceType[]>(() =>
-    getAllResourceTypes(initial.customResourceTypes, initial.deletedResourceTypeIds),
-  );
-  const [saveCounts, setSaveCounts] = useState<Record<string, number>>(initial.saveCounts);
+  const [extras, setExtras] = useState<Resource[]>([]);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const [deletedCollectionIds, setDeletedCollectionIds] = useState<string[]>([]);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [collectionResources, setCollectionResources] = useState<CollectionResource[]>([]);
+  const [categories, setCategoriesState] = useState<Category[]>(() => getAllCategories());
+  const [resourceTypes, setResourceTypesState] = useState<ResourceType[]>(() => getAllResourceTypes());
+  const [saveCounts, setSaveCounts] = useState<Record<string, number>>({});
   const [navigation, setNavigation] = useState<Navigation>({ kind: "all" });
   const [navHistory, setNavHistory] = useState<Navigation[]>([]);
   const [lastCategoryNav, setLastCategoryNav] = useState<Navigation>({ kind: "all" });
@@ -277,16 +270,45 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [theme, setThemeState] = useState<"light" | "dark">(initial.theme);
+  const [theme, setThemeState] = useState<"light" | "dark">("dark");
 
   // Role and Auth State
-  const [role, setRole] = useState<UserRole>(initial.role ?? "user");
+  const [role, setRole] = useState<UserRole>("user");
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string | null } | null>(null);
   const [remoteResources, setRemoteResources] = useState<Resource[] | null>(null);
+
+  const isHydratedRef = useRef(false);
 
   const isAdmin = role === "admin";
 
   useEffect(() => {
+    // 1. Read persisted state from localStorage on client mount
+    const persisted = readInitial();
+    if (persisted.extras.length > 0) setExtras(persisted.extras);
+    if (persisted.deletedIds.length > 0) setDeletedIds(persisted.deletedIds);
+    if (persisted.deletedCollectionIds && persisted.deletedCollectionIds.length > 0) {
+      setDeletedCollectionIds(persisted.deletedCollectionIds);
+    }
+    if (persisted.savedIds.length > 0) setSavedIds(persisted.savedIds);
+    if (persisted.collections.length > 0) setCollections(persisted.collections);
+    if (persisted.collectionResources.length > 0) setCollectionResources(persisted.collectionResources);
+    if (
+      (persisted.customCategories && persisted.customCategories.length > 0) ||
+      (persisted.deletedCategoryIds && persisted.deletedCategoryIds.length > 0)
+    ) {
+      setCategoriesState(getAllCategories(persisted.customCategories, persisted.deletedCategoryIds));
+    }
+    if (
+      (persisted.customResourceTypes && persisted.customResourceTypes.length > 0) ||
+      (persisted.deletedResourceTypeIds && persisted.deletedResourceTypeIds.length > 0)
+    ) {
+      setResourceTypesState(getAllResourceTypes(persisted.customResourceTypes, persisted.deletedResourceTypeIds));
+    }
+    if (Object.keys(persisted.saveCounts).length > 0) setSaveCounts(persisted.saveCounts);
+    if (persisted.theme) setThemeState(persisted.theme);
+    if (persisted.role) setRole(persisted.role);
+
+    // 2. Read URL params
     const url = readInitialUrl();
     setNavigation(url.navigation);
     if (url.navigation.kind === "category" || url.navigation.kind === "all") {
@@ -297,6 +319,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     setFilters(url.filters);
     setView(url.view);
     setSort(url.sort);
+
+    isHydratedRef.current = true;
   }, []);
 
   // Hydrate Supabase Session & Remote Data if configured
@@ -620,18 +644,26 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    const payload: Persisted = {
-      extras,
-      deletedIds,
-      deletedCollectionIds,
-      savedIds,
-      collections,
-      collectionResources,
-      saveCounts,
-      theme,
-      role,
-    };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    if (!isHydratedRef.current) return;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const cur = raw ? JSON.parse(raw) : {};
+      const payload: Persisted = {
+        ...cur,
+        extras,
+        deletedIds,
+        deletedCollectionIds,
+        savedIds,
+        collections,
+        collectionResources,
+        saveCounts,
+        theme,
+        role,
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
   }, [
     extras,
     deletedIds,
@@ -650,6 +682,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   }, [search]);
 
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
     const params = new URLSearchParams();
     if (navigation.kind === "all") params.set("category", "all");
