@@ -56,8 +56,8 @@ export function ResourceList({
     if (!isAdmin) return;
     e.preventDefault();
     e.stopPropagation();
-    const x = Math.min(e.clientX, window.innerWidth - 220);
-    const y = Math.min(e.clientY, window.innerHeight - 340);
+    const x = Math.max(12, Math.min(e.clientX, window.innerWidth - 230));
+    const y = Math.max(12, Math.min(e.clientY, window.innerHeight - 340));
     setContextMenu({ resource, x, y });
   };
 
@@ -96,16 +96,60 @@ export function ResourceList({
 
   if (loading) {
     return (
-      <div className="px-2 py-3 sm:px-3 sm:py-4">
-        {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="flex items-center gap-2 border-b border-border py-2.5 sm:gap-3 sm:py-3">
-            <Skeleton className="size-8 shrink-0 sm:size-10" />
-            <div className="flex-1 space-y-1.5 sm:space-y-2">
-              <Skeleton className="h-3.5 w-32 sm:h-4 sm:w-40" />
-              <Skeleton className="h-3 w-48 sm:w-64" />
-            </div>
+      <div className="w-full">
+        {view === "grid" && (
+          <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <div
+                key={index}
+                className="relative flex h-[104px] w-full flex-col justify-between gap-3 rounded-2xl border border-border bg-subtle-background/30 p-3.5 sm:p-4"
+              >
+                <div className="flex w-full items-center gap-2.5 sm:gap-3">
+                  <Skeleton className="size-8 shrink-0 rounded-xl" />
+                  <Skeleton className="h-4 w-28 sm:w-32 rounded-md" />
+                </div>
+                <div className="flex w-full items-center justify-between gap-2">
+                  <Skeleton className="h-7 w-16 rounded-full" />
+                  <Skeleton className="h-7 w-14 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {view === "compact" && (
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 18 }).map((_, index) => (
+              <div
+                key={index}
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-subtle-background/30 px-3 py-1.5"
+              >
+                <Skeleton className="size-5 rounded-full" />
+                <Skeleton className="h-3.5 w-16 sm:w-20 rounded-md" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {view === "list" && (
+          <div className="overflow-hidden rounded-2xl border border-border">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between gap-3 border-b border-border/80 px-3 py-2.5 sm:px-4 sm:py-3 last:border-b-0"
+              >
+                <div className="flex items-center gap-2.5 sm:gap-3 flex-1">
+                  <Skeleton className="size-8 shrink-0 rounded-xl" />
+                  <Skeleton className="h-4 w-36 sm:w-48 rounded-md" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-7 w-16 rounded-full" />
+                  <Skeleton className="h-7 w-14 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -195,7 +239,7 @@ export function ResourceList({
 
           <div
             style={{ top: contextMenu.y, left: contextMenu.x }}
-            className="fixed z-50 min-w-[210px] max-w-[240px] overflow-hidden rounded-2xl border border-border/80 bg-background/95 backdrop-blur-xl p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.22)] dark:shadow-[0_20px_48px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-50 min-w-[200px] max-w-[min(calc(100vw-24px),240px)] overflow-hidden rounded-2xl border border-border/80 bg-background/95 backdrop-blur-xl p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.22)] dark:shadow-[0_20px_48px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-100"
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >

@@ -54,7 +54,7 @@ export function SearchCommand() {
   if (!commandOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center px-3 pb-4 pt-[10vh] sm:items-start sm:px-4 sm:pt-[18vh] sm:pb-0">
+    <div className="fixed inset-0 z-50 flex items-end justify-center px-2 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-[8vh] sm:items-start sm:px-4 sm:pt-[18vh] sm:pb-0">
       <button
         aria-label="Close search"
         className="absolute inset-0 bg-black/25 dark:bg-black/50 backdrop-blur-[2px] transition-all"
@@ -108,7 +108,7 @@ export function SearchCommand() {
         </div>
 
         {/* Results list */}
-        <ul className="max-h-[340px] overflow-y-auto p-1.5 space-y-0.5" role="listbox">
+        <ul className="max-h-[min(340px,50vh)] overflow-y-auto overscroll-contain p-1.5 space-y-0.5" role="listbox">
           {results.length === 0 ? (
             <li className="px-3 py-10 text-center">
               <p className="text-[13px] font-medium text-foreground">No resources found</p>

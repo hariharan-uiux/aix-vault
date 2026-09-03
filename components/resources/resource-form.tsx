@@ -241,7 +241,7 @@ export function ResourceForm() {
               align="left"
               className="w-full"
               triggerClassName="w-full justify-between h-9 rounded-full px-3 text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
-              contentClassName="w-[260px]"
+              contentClassName="w-[min(calc(100vw-3rem),260px)]"
               onAdd={(name) => {
                 const newCat = addCategory(name);
                 if (newCat) setCategoryId(newCat.id);
@@ -264,7 +264,7 @@ export function ResourceForm() {
               align="right"
               className="w-full"
               triggerClassName="w-full justify-between h-9 rounded-full px-3 text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
-              contentClassName="w-[220px]"
+              contentClassName="w-[min(calc(100vw-3rem),220px)]"
               onAdd={(name) => {
                 const newType = addResourceType(name);
                 if (newType) setType(newType.slug);
@@ -316,7 +316,7 @@ export function ResourceForm() {
               align="right"
               className="w-full"
               triggerClassName="w-full justify-between h-9 rounded-full px-3 text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
-              contentClassName="w-[260px]"
+              contentClassName="w-[min(calc(100vw-3rem),260px)]"
             />
           </div>
         </div>

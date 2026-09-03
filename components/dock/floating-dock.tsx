@@ -7,20 +7,25 @@ import {
   ViewToggle,
 } from "@/components/filters/filters";
 import { Tooltip } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { useVault } from "@/lib/vault/store";
-import { Home, Plus } from "lucide-react";
+import { Folder, FolderOpen, Home, Plus } from "lucide-react";
 
 export function FloatingDock() {
-  const { setAddOpen, navigation, goBack, isAdmin } = useVault();
+  const { setAddOpen, navigation, goBack, isAdmin, sidebarOpen, setSidebarOpen } = useVault();
   const isFolder = navigation.kind === "collection";
+  const isNavActive = navigation.kind === "collection";
 
   return (
     <aside
       aria-label="Quick Actions and Filters"
-      className="pointer-events-none fixed bottom-5 inset-x-0 z-30 flex items-center justify-center gap-2 sm:gap-2.5 px-4"
+      className="pointer-events-none fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-40 flex items-center justify-center gap-1.5 sm:gap-2.5 px-2 sm:px-4"
     >
       <div
-        className="pointer-events-auto apple-blur relative flex max-w-[calc(100vw-5.5rem)] items-center gap-1.5 rounded-full border border-border/80 bg-background/85 p-1.5 transition-all duration-200 sm:gap-2"
+        className={cn(
+          "pointer-events-auto apple-blur relative flex items-center gap-1 sm:gap-2 rounded-full border border-border/80 bg-background/85 p-1 sm:p-1.5 transition-all duration-200",
+          isAdmin ? "max-w-[calc(100vw-4.5rem)]" : "max-w-[calc(100vw-1.5rem)]",
+        )}
       >
         {/* Home button when inside a folder */}
         {isFolder && (
@@ -41,8 +46,26 @@ export function FloatingDock() {
 
         <div className="h-4 w-px shrink-0 bg-border/80" />
 
-        {/* Display Controls: Filters, Sort, View Toggle */}
+        {/* Display Controls: Folders (mobile), Filters, Sort, View Toggle */}
         <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Folder toggle button (Mobile only; on desktop it is in the header) */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={cn(
+              "sm:hidden relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border transition-colors cursor-pointer",
+              sidebarOpen
+                ? "bg-subtle-background text-foreground"
+                : "bg-subtle-background/50 text-muted-foreground hover:bg-subtle-background hover:text-foreground",
+            )}
+            aria-label={sidebarOpen ? "Close collections" : "Collections & Folders"}
+          >
+            {sidebarOpen ? <FolderOpen size={14} /> : <Folder size={14} />}
+            {isNavActive && (
+              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-foreground" />
+            )}
+          </button>
+
           <FilterPopover side="top" align="center" iconOnly />
           <SortMenu side="top" align="center" iconOnly />
           <div className="hidden sm:block">

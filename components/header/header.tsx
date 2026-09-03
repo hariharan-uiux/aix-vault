@@ -5,7 +5,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useVault } from "@/lib/vault/store";
 import { cn } from "@/lib/utils";
 import { AdminLoginModal } from "@/components/auth/admin-login-modal";
-import { Coffee, Folder, FolderOpen, Moon, Search, Shield, Sun } from "lucide-react";
+import { Coffee, Folder, FolderOpen, Loader2, Moon, Search, Shield, Sun } from "lucide-react";
 
 export function Header() {
   const {
@@ -23,6 +23,7 @@ export function Header() {
     role,
     authModalOpen,
     setAuthModalOpen,
+    isLoading,
   } = useVault();
 
   const isNavActive = navigation.kind === "collection";
@@ -34,20 +35,33 @@ export function Header() {
         authModalOpen ? "z-50" : "z-30",
       )}
     >
-      {/* Left: Brand */}
-      <div className="flex items-center min-w-[100px] sm:min-w-[140px] shrink-0">
+      {/* Left: Brand with Hover Popup */}
+      <div className="group relative flex items-center shrink-0 sm:min-w-[140px]">
         <button
           type="button"
           onClick={() => setNavigation({ kind: "all" })}
-          className="text-[13px] font-medium tracking-[0.14em] text-foreground transition-opacity hover:opacity-80"
+          className="text-[13px] font-medium tracking-[0.14em] text-foreground transition-opacity hover:opacity-80 cursor-pointer"
         >
           AIX VAULT
         </button>
+
+        {/* Brand hover popup */}
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute left-0 top-[calc(100%+8px)] z-50 w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border/80 dark:border-white/10 bg-background/95 dark:bg-background/95 backdrop-blur-xl p-2.5 sm:px-3 sm:py-2.5 shadow-xl shadow-black/10 dark:shadow-black/50 opacity-0 -translate-y-1 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100"
+        >
+          <div className="text-[12px] font-semibold text-foreground tracking-tight">
+            AI + UX = Vault
+          </div>
+          <p className="mt-0.5 text-[11.5px] text-muted-foreground leading-normal">
+            handpicked tool for fellow UIdevs like me! :)
+          </p>
+        </div>
       </div>
 
       {/* Middle: Centered Search with Folder toggle and Dark mode toggle */}
-      <div className="mx-2 sm:mx-4 flex flex-1 max-w-xs sm:max-w-md items-center gap-1.5 sm:gap-2">
-        <div className="relative flex-1">
+      <div className="mx-1.5 sm:mx-4 flex flex-1 min-w-0 max-w-xs sm:max-w-md items-center gap-1.5 sm:gap-2">
+        <div className="relative flex-1 min-w-0">
           <Search
             size={14}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle-foreground"
@@ -57,37 +71,39 @@ export function Header() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search resources..."
             aria-label="Search resources"
-            className="h-8 pl-8 pr-10 text-[13px] bg-subtle-background/50 focus:bg-background"
+            className="h-8 pl-8 pr-3 sm:pr-10 text-[13px] bg-subtle-background/50 focus:bg-background truncate"
           />
           <button
             type="button"
             onClick={() => setCommandOpen(true)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-border px-1.5 py-0.5 text-[11px] font-mono text-subtle-foreground hover:text-foreground"
+            className="hidden sm:inline-flex absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-border px-1.5 py-0.5 text-[11px] font-mono text-subtle-foreground hover:text-foreground"
             aria-label="Search (/ or ⌘K)"
           >
             /
           </button>
         </div>
 
-        {/* Folder toggle button */}
-        <Tooltip label={sidebarOpen ? "Close collections" : "Collections & Folders"}>
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className={cn(
-              "relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border transition-colors",
-              sidebarOpen
-                ? "bg-subtle-background text-foreground"
-                : "bg-subtle-background/50 text-muted-foreground hover:bg-subtle-background hover:text-foreground",
-            )}
-            aria-label={sidebarOpen ? "Close collections" : "Open collections"}
-          >
-            {sidebarOpen ? <FolderOpen size={15} /> : <Folder size={15} />}
-            {isNavActive && (
-              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-foreground" />
-            )}
-          </button>
-        </Tooltip>
+        {/* Folder toggle button (Desktop only; on mobile it is in the bottom dock) */}
+        <div className="hidden sm:flex">
+          <Tooltip label={sidebarOpen ? "Close collections" : "Collections & Folders"}>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className={cn(
+                "relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border transition-colors",
+                sidebarOpen
+                  ? "bg-subtle-background text-foreground"
+                  : "bg-subtle-background/50 text-muted-foreground hover:bg-subtle-background hover:text-foreground",
+              )}
+              aria-label={sidebarOpen ? "Close collections" : "Open collections"}
+            >
+              {sidebarOpen ? <FolderOpen size={15} /> : <Folder size={15} />}
+              {isNavActive && (
+                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-foreground" />
+              )}
+            </button>
+          </Tooltip>
+        </div>
 
         {/* Dark mode toggle */}
         <Tooltip label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
@@ -122,21 +138,39 @@ export function Header() {
       </div>
 
       {/* Right: Profile Toggle & Resource Count */}
-      <div className="flex items-center justify-end gap-2.5 min-w-[70px] sm:min-w-[170px] shrink-0">
-        <span
-          className="whitespace-nowrap text-[12px] font-medium text-muted-foreground tabular-nums select-none"
-          title={`${result.total} ${result.total === 1 ? "resource" : "resources"}${deferredSearch ? ` for "${deferredSearch}"` : ""}`}
-        >
-          {result.total}{" "}
-          <span className="hidden sm:inline">
-            {result.total === 1 ? "resource" : "resources"}
-          </span>
-          {deferredSearch ? (
-            <span className="hidden md:inline text-subtle-foreground truncate max-w-[120px]">
-              {` for "${deferredSearch}"`}
+      <div className="flex items-center justify-end gap-2 sm:gap-2.5 shrink-0 sm:min-w-[170px]">
+        {isLoading && result.total === 0 ? (
+          <div
+            className="flex items-center gap-1.5 rounded-full border border-border/80 bg-subtle-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground select-none"
+            title="Loading vault resources from Supabase..."
+          >
+            <Loader2 size={12} className="animate-spin text-muted-foreground" />
+            <span className="tabular-nums">Loading...</span>
+          </div>
+        ) : (
+          <span
+            className="whitespace-nowrap text-[12px] font-medium text-muted-foreground tabular-nums select-none flex items-center gap-1.5"
+            title={`${result.total} ${result.total === 1 ? "resource" : "resources"}${deferredSearch ? ` for "${deferredSearch}"` : ""}${isLoading ? " • Syncing..." : ""}`}
+          >
+            {isLoading && (
+              <span className="relative flex size-1.5" title="Syncing with Supabase">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+              </span>
+            )}
+            <span>
+              {result.total}{" "}
+              <span className="hidden sm:inline">
+                {result.total === 1 ? "resource" : "resources"}
+              </span>
+              {deferredSearch ? (
+                <span className="hidden md:inline text-subtle-foreground truncate max-w-[120px]">
+                  {` for "${deferredSearch}"`}
+                </span>
+              ) : null}
             </span>
-          ) : null}
-        </span>
+          </span>
+        )}
 
         {/* Buy Me a Coffee icon button in viewer mode */}
         {role !== "admin" && (
@@ -179,6 +213,13 @@ export function Header() {
           </div>
         )}
       </div>
+
+      {/* Ambient Top Shimmer Bar during Supabase Loading / Syncing */}
+      {isLoading && (
+        <div className="absolute -bottom-px left-0 right-0 h-[1.5px] overflow-hidden bg-transparent z-40 pointer-events-none">
+          <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-foreground/60 to-transparent indeterminate-progress" />
+        </div>
+      )}
     </header>
   );
 }

@@ -118,7 +118,7 @@ export function ResourceDrawer() {
 
   // Drawer top header: title on the left
   const headerTitle = (
-    <h3 className="text-[14px] font-medium text-foreground truncate max-w-[240px]">
+    <h3 className="text-[14px] font-medium text-foreground truncate max-w-[180px] sm:max-w-[240px]">
       {selected.name}
     </h3>
   );
@@ -145,7 +145,7 @@ export function ResourceDrawer() {
         <div
           role="dialog"
           aria-label="Confirm deletion"
-          className="absolute right-[-38px] top-full mt-2 z-50 w-[260px] rounded-xl border border-border bg-background p-3.5 shadow-xl shadow-black/10 dark:shadow-black/50 animate-in fade-in-0 zoom-in-95 duration-100 text-left"
+          className="absolute right-0 sm:right-[-38px] top-full mt-2 z-50 w-[min(calc(100vw-2rem),260px)] rounded-xl border border-border bg-background p-3.5 shadow-xl shadow-black/10 dark:shadow-black/50 animate-in fade-in-0 zoom-in-95 duration-100 text-left"
         >
           <div className="flex items-start gap-2.5">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-600 dark:text-red-400 mt-0.5">
@@ -305,7 +305,7 @@ export function ResourceDrawer() {
         <div className="w-full my-5 border-t border-border/70" />
 
         {/* Pricing, Category & Tools selection */}
-        <div className="flex items-center justify-center gap-1 text-[13px] text-muted-foreground">
+        <div className="flex items-center justify-center gap-1 text-[12px] sm:text-[13px] text-muted-foreground flex-wrap">
           {isAdmin ? (
             <button
               type="button"
@@ -317,12 +317,12 @@ export function ResourceDrawer() {
               title={`Pricing: ${currentPricing} (Click to switch to ${
                 currentPricing === "Free" ? "Freemium" : "Free"
               })`}
-              className="rounded px-1.5 py-0.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-subtle-background transition-colors cursor-pointer"
+              className="rounded px-1.5 py-0.5 text-[12px] sm:text-[13px] text-muted-foreground hover:text-foreground hover:bg-subtle-background transition-colors cursor-pointer"
             >
               {currentPricing}
             </button>
           ) : (
-            <span className="px-1.5 py-0.5 text-[13px] text-muted-foreground">
+            <span className="px-1.5 py-0.5 text-[12px] sm:text-[13px] text-muted-foreground">
               {currentPricing}
             </span>
           )}
@@ -338,8 +338,8 @@ export function ResourceDrawer() {
               placeholder="Select category"
               title="Change category"
               align="center"
-              triggerClassName="border-none bg-transparent hover:bg-subtle-background hover:text-foreground text-muted-foreground px-1.5 py-0.5 text-[13px] font-normal shadow-none"
-              contentClassName="w-60"
+              triggerClassName="border-none bg-transparent hover:bg-subtle-background hover:text-foreground text-muted-foreground px-1.5 py-0.5 text-[12px] sm:text-[13px] font-normal shadow-none"
+              contentClassName="w-[min(calc(100vw-2rem),15rem)]"
               onAdd={(name) => {
                 const newCat = addCategory(name);
                 if (newCat) updateResource(selected.id, { categoryId: newCat.id });
@@ -348,7 +348,7 @@ export function ResourceDrawer() {
               onDelete={deleteCategory}
             />
           ) : (
-            <span className="px-1.5 py-0.5 text-[13px] text-muted-foreground">
+            <span className="px-1.5 py-0.5 text-[12px] sm:text-[13px] text-muted-foreground">
               {category?.name ?? selected.categoryId}
             </span>
           )}
@@ -364,8 +364,8 @@ export function ResourceDrawer() {
               placeholder="Select tool type"
               title="Change tool type"
               align="center"
-              triggerClassName="border-none bg-transparent hover:bg-subtle-background hover:text-foreground text-muted-foreground px-1.5 py-0.5 text-[13px] font-normal shadow-none"
-              contentClassName="w-60"
+              triggerClassName="border-none bg-transparent hover:bg-subtle-background hover:text-foreground text-muted-foreground px-1.5 py-0.5 text-[12px] sm:text-[13px] font-normal shadow-none"
+              contentClassName="w-[min(calc(100vw-2rem),15rem)]"
               onAdd={(name) => {
                 const newType = addResourceType(name);
                 if (newType) updateResource(selected.id, { type: newType.slug });
@@ -374,7 +374,7 @@ export function ResourceDrawer() {
               onDelete={deleteResourceType}
             />
           ) : (
-            <span className="px-1.5 py-0.5 text-[13px] text-muted-foreground">
+            <span className="px-1.5 py-0.5 text-[12px] sm:text-[13px] text-muted-foreground">
               {resourceType?.name ?? selected.type}
             </span>
           )}
@@ -457,7 +457,7 @@ export function ResourceDrawer() {
                   placeholder="Choose collection..."
                   align="left"
                   triggerClassName="w-full justify-between h-9 rounded-full px-3 text-[13px] bg-background border border-border/80 hover:border-foreground/30"
-                  contentClassName="w-[280px]"
+                  contentClassName="w-[min(calc(100vw-3rem),280px)]"
                 />
               </div>
               <Button

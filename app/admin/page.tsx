@@ -51,19 +51,21 @@ function AdminLoginPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       {/* Product Header */}
-      <header className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border apple-blur px-4 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border apple-blur px-3.5 sm:px-6">
         <Link
           href="/"
-          className="text-[13px] font-medium tracking-[0.14em] text-foreground hover:opacity-80 transition-opacity"
+          className="text-[13px] font-medium tracking-[0.14em] text-foreground hover:opacity-80 transition-opacity shrink-0"
         >
           AIX VAULT
         </Link>
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
         >
           <ArrowLeft size={13} />
-          <span>Return to Public Directory</span>
+          <span>
+            <span className="hidden sm:inline">Return to </span>Directory
+          </span>
         </Link>
       </header>
 

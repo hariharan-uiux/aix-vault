@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -18,13 +18,19 @@ export const metadata: Metadata = {
   description: "A minimal directory of developer and design tools.",
 };
 
-const themeScript = `(function(){try{var raw=localStorage.getItem('aix-vault:v2')||localStorage.getItem('aix-vault:v1');var t=null;if(raw){try{t=JSON.parse(raw).theme}catch(e){}}if(!t){t=localStorage.getItem('aix-vault:theme')}if(t==='light'||t==='dark'){document.documentElement.classList.toggle('dark',t==='dark')}else{document.documentElement.classList.add('dark')}}catch(e){document.documentElement.classList.add('dark')}})()`;
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
+const themeScript = `(function(){try{var raw=localStorage.getItem('aix-vault:v2')||localStorage.getItem('aix-vault:v1');var t=null;if(raw){try{t=JSON.parse(raw).theme}catch(e){}}if(!t){t=localStorage.getItem('aix-vault:theme')}if(t==='light'||t==='dark'){document.documentElement.classList.toggle('dark',t==='dark')}else{var p=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',!!p)}}catch(e){var p=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',!!p)}})()`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

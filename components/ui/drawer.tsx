@@ -49,7 +49,8 @@ export function Drawer({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "absolute right-0 top-0 flex h-full w-full max-w-[380px] sm:max-w-[400px] flex-col border-l border-border bg-background shadow-[var(--shadow)] transition-transform duration-[240ms] ease-out max-md:max-w-none max-md:rounded-t-2xl max-md:border-l-0 max-md:border-t md:translate-x-0",
+          "absolute right-0 top-0 flex h-full w-full max-w-[380px] sm:max-w-[400px] flex-col border-l border-border bg-background shadow-[var(--shadow)] transition-transform duration-[240ms] ease-out",
+          "max-md:top-auto max-md:bottom-0 max-md:h-[88dvh] max-md:max-h-[90dvh] max-md:max-w-none max-md:rounded-t-2xl max-md:border-l-0 max-md:border-t",
           open
             ? "translate-y-0 md:translate-x-0"
             : "translate-y-full md:translate-x-full md:translate-y-0",
@@ -71,7 +72,7 @@ export function Drawer({
             </button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] sm:px-6">{children}</div>
       </aside>
     </div>
   );

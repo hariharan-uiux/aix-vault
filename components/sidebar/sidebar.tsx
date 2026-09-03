@@ -465,16 +465,20 @@ export function Sidebar() {
         aria-hidden="true"
       />
 
-      {/* Floating Top Bar with Frosted Glass Translucency */}
+      {/* Floating Folders Bar / Dock with Frosted Glass Translucency */}
       <div
         ref={barRef}
         role="dialog"
         aria-label="Collections and Saved Navigation"
         className={cn(
-          "fixed top-14 left-1/2 z-40 w-[calc(100vw-1.5rem)] max-w-2xl sm:max-w-3xl md:max-w-4xl -translate-x-1/2 rounded-2xl border border-border/80 dark:border-white/10 bg-background/85 dark:bg-background/85 backdrop-blur-2xl p-3 shadow-2xl shadow-black/15 dark:shadow-black/60 transition-all duration-200 ease-out sm:p-4",
+          "fixed left-1/2 z-40 w-[calc(100vw-1.5rem)] max-w-2xl sm:max-w-3xl md:max-w-4xl -translate-x-1/2 rounded-2xl border border-border/80 dark:border-white/10 bg-background/85 dark:bg-background/85 backdrop-blur-2xl p-3 sm:p-4 shadow-2xl shadow-black/15 dark:shadow-black/60 transition-all duration-200 ease-out",
+          // Desktop: opens from top (below header)
+          "sm:top-14 sm:bottom-auto",
+          // Mobile: opens from bottom (above dock)
+          "max-sm:top-auto max-sm:bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))]",
           sidebarOpen
             ? "translate-y-0 opacity-100 scale-100 pointer-events-auto"
-            : "-translate-y-3 opacity-0 scale-[0.98] pointer-events-none",
+            : "max-sm:translate-y-3 sm:-translate-y-3 opacity-0 scale-[0.98] pointer-events-none",
         )}
       >
         {/* Top Header Row: Folders Title & Count on Left, Saved Button & Close on Right */}
@@ -521,7 +525,7 @@ export function Sidebar() {
         <div className="my-2.5 sm:my-3 h-px w-full bg-black/10 dark:bg-white/12" />
 
         {/* Realistic Folder Illustrations Grid: shows 6 folders on first line, wraps new folders to second line */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-6 pt-4 sm:pt-5 pb-2 px-1 max-h-[70vh] overflow-y-auto no-scrollbar">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-6 pt-4 sm:pt-5 pb-2 px-1 max-h-[70vh] max-sm:max-h-[min(380px,50vh)] overflow-y-auto no-scrollbar">
           {collections.map((collection) => {
             const active =
               navigation.kind === "collection" &&
@@ -539,8 +543,8 @@ export function Sidebar() {
                   if (!isAdmin) return;
                   e.preventDefault();
                   e.stopPropagation();
-                  const x = Math.min(e.clientX, window.innerWidth - 170);
-                  const y = Math.min(e.clientY, window.innerHeight - 120);
+                  const x = Math.max(12, Math.min(e.clientX, window.innerWidth - 170));
+                  const y = Math.max(12, Math.min(e.clientY, window.innerHeight - 120));
                   setContextMenu({
                     folderId: collection.id,
                     folderName: collection.name,
@@ -724,7 +728,7 @@ export function Sidebar() {
 
           <div
             style={{ top: contextMenu.y, left: contextMenu.x }}
-            className="fixed z-50 min-w-[150px] overflow-hidden rounded-xl border border-border/80 bg-background/95 backdrop-blur-xl p-1 shadow-[0_12px_36px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-50 min-w-[150px] max-w-[min(calc(100vw-24px),180px)] overflow-hidden rounded-xl border border-border/80 bg-background/95 backdrop-blur-xl p-1 shadow-[0_12px_36px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-100"
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >

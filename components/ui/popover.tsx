@@ -68,7 +68,7 @@ export function Popover({
         {open ? (
           <div
             className={cn(
-              "absolute z-50 min-w-[220px] max-h-[calc(100vh-140px)] overflow-y-auto rounded-2xl border border-border bg-background p-3 shadow-2xl shadow-black/15 dark:shadow-black/50",
+              "absolute z-50 min-w-[200px] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-140px)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-background p-3 shadow-2xl shadow-black/15 dark:shadow-black/50",
               side === "top"
                 ? "bottom-[calc(100%+10px)]"
                 : "top-[calc(100%+8px)]",

@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  seedCollectionResources,
-  seedCollections,
   seedResources,
 } from "@/db/seed/resources";
 import { resourceInputSchema, type ResourceInput } from "@/lib/resources/schema";
@@ -41,8 +39,22 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 
 const STORAGE_KEY = "aix-vault:v2";
+const REMOTE_CACHE_KEY = "aix-vault:remote-cache";
+
+function readRemoteCache(): Resource[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REMOTE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 type Persisted = {
   extras: Resource[];
@@ -70,7 +82,15 @@ const LEGACY_DUMMY_IDS = new Set([
   "astro", "mdn", "css-tricks", "ui-tools", "ai-tools", "dev-tools", "design-tools", "typography", "productivity"
 ]);
 
+function getSystemTheme(): "light" | "dark" {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
 function readInitial(): Persisted {
+  const fallbackTheme = getSystemTheme();
   const fallback: Persisted = {
     extras: [],
     deletedIds: [],
@@ -79,7 +99,7 @@ function readInitial(): Persisted {
     collections: [],
     collectionResources: [],
     saveCounts: {},
-    theme: "dark",
+    theme: fallbackTheme,
     role: "user",
     customCategories: [],
     deletedCategoryIds: [],
@@ -90,8 +110,9 @@ function readInitial(): Persisted {
   try {
     // Read from v2, or check legacy v1 if needed
     const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("aix-vault:v1");
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
+    const explicitTheme = window.localStorage.getItem("aix-vault:theme");
+    if (!raw && !explicitTheme) return fallback;
+    const parsed = raw ? JSON.parse(raw) : {};
 
     const deletedColls = new Set<string>(parsed.deletedCollectionIds || []);
     const storedCollections: Collection[] = Array.isArray(parsed.collections)
@@ -119,6 +140,13 @@ function readInitial(): Persisted {
     storedCustomTypes.forEach(registerResourceType);
     storedDeletedTypeIds.forEach(unregisterResourceType);
 
+    const resolvedTheme: "light" | "dark" =
+      parsed.theme === "light" || parsed.theme === "dark"
+        ? parsed.theme
+        : explicitTheme === "light" || explicitTheme === "dark"
+        ? explicitTheme
+        : fallbackTheme;
+
     return {
       ...fallback,
       ...parsed,
@@ -130,7 +158,7 @@ function readInitial(): Persisted {
       deletedCategoryIds: storedDeletedCatIds,
       customResourceTypes: storedCustomTypes,
       deletedResourceTypeIds: storedDeletedTypeIds,
-      theme: parsed.theme === "light" || parsed.theme === "dark" ? parsed.theme : "dark",
+      theme: resolvedTheme,
       role: initialRole,
     };
   } catch {
@@ -188,6 +216,7 @@ function readInitialUrl(): {
 
 type VaultContextValue = {
   resources: Resource[];
+  isLoading: boolean;
   collections: Collection[];
   savedIds: string[];
   navigation: Navigation;
@@ -270,12 +299,29 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [theme, setThemeState] = useState<"light" | "dark">("dark");
+  const [theme, setThemeState] = useState<"light" | "dark">(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("aix-vault:v1");
+        const explicitTheme = window.localStorage.getItem("aix-vault:theme");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.theme === "light" || parsed.theme === "dark") return parsed.theme;
+        }
+        if (explicitTheme === "light" || explicitTheme === "dark") return explicitTheme;
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      } catch {
+        return "dark";
+      }
+    }
+    return "dark";
+  });
 
   // Role and Auth State
   const [role, setRole] = useState<UserRole>("user");
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string | null } | null>(null);
   const [remoteResources, setRemoteResources] = useState<Resource[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isHydratedRef = useRef(false);
 
@@ -307,6 +353,12 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     if (Object.keys(persisted.saveCounts).length > 0) setSaveCounts(persisted.saveCounts);
     if (persisted.theme) setThemeState(persisted.theme);
     if (persisted.role) setRole(persisted.role);
+
+    // Read cached remote resources so data & counts are instant
+    const cachedRemote = readRemoteCache();
+    if (cachedRemote && cachedRemote.length > 0) {
+      setRemoteResources(cachedRemote);
+    }
 
     // 2. Read URL params
     const url = readInitialUrl();
@@ -369,113 +421,95 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Fetch resources from Supabase
-    async function fetchRemote() {
-      try {
-        const { data: resData, error } = await supabase!
-          .from("resources")
-          .select(`
-            id, name, slug, description, url, domain, icon_url, type, category_id,
-            created_by, created_at, updated_at, is_public,
-            resource_tags ( tag_id )
-          `)
-          .order("created_at", { ascending: false });
-
-        if (!error && resData && resData.length > 0) {
-          const mapped: Resource[] = resData.map((r: any) => ({
-            id: r.id,
-            name: r.name,
-            slug: r.slug,
-            description: r.description ?? "",
-            url: r.url,
-            domain: r.domain,
-            iconUrl: r.icon_url,
-            type: r.type,
-            categoryId: r.category_id,
-            createdBy: r.created_by,
-            createdAt: r.created_at,
-            updatedAt: r.updated_at,
-            isPublic: r.is_public,
-            tagIds: Array.isArray(r.resource_tags) ? r.resource_tags.map((t: any) => t.tag_id) : [],
-            saveCount: 0,
-          }));
-          setRemoteResources(mapped);
-        }
-      } catch {
-        // Fall back to seed data
-      }
-    }
-
     return () => {
       authListener?.subscription?.unsubscribe();
     };
   }, []);
 
   const refreshResources = useCallback(async () => {
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const { data: resData, error } = await supabase
-          .from("resources")
-          .select(`
-            id, name, slug, description, url, domain, icon_url, type, category_id,
-            created_by, created_at, updated_at, is_public,
-            resource_tags ( tag_id )
-          `)
-          .order("created_at", { ascending: false });
+    setIsLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        try {
+          const { data: resData, error } = await supabase
+            .from("resources")
+            .select(`
+              id, name, slug, description, url, domain, icon_url, type, category_id,
+              created_by, created_at, updated_at, is_public,
+              resource_tags ( tag_id )
+            `)
+            .order("created_at", { ascending: false });
 
-        if (!error && resData) {
-          type Row = {
-            id: string;
-            name: string;
-            slug: string;
-            description: string | null;
-            url: string;
-            domain: string;
-            icon_url: string | null;
-            type: Resource["type"];
-            category_id: string;
-            created_by: string | null;
-            created_at: string;
-            updated_at: string;
-            is_public: boolean;
-            resource_tags?: { tag_id: string }[];
-          };
-          const mapped: Resource[] = (resData as unknown as Row[]).map((r) => ({
-            id: r.id,
-            name: r.name,
-            slug: r.slug,
-            description: r.description ?? "",
-            url: r.url,
-            domain: r.domain,
-            iconUrl: r.icon_url,
-            type: r.type,
-            categoryId: r.category_id,
-            createdBy: r.created_by,
-            createdAt: r.created_at,
-            updatedAt: r.updated_at,
-            isPublic: r.is_public,
-            tagIds: Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [],
-            saveCount: 0,
-          }));
-          setRemoteResources(mapped);
-          return;
+          if (!error && resData) {
+            type Row = {
+              id: string;
+              name: string;
+              slug: string;
+              description: string | null;
+              url: string;
+              domain: string;
+              icon_url: string | null;
+              type: Resource["type"];
+              category_id: string;
+              created_by: string | null;
+              created_at: string;
+              updated_at: string;
+              is_public: boolean;
+              resource_tags?: { tag_id: string }[];
+            };
+            const mapped: Resource[] = (resData as unknown as Row[]).map((r) => ({
+              id: r.id,
+              name: r.name,
+              slug: r.slug,
+              description: r.description ?? "",
+              url: r.url,
+              domain: r.domain,
+              iconUrl: r.icon_url,
+              type: r.type,
+              categoryId: r.category_id,
+              createdBy: r.created_by,
+              createdAt: r.created_at,
+              updatedAt: r.updated_at,
+              isPublic: r.is_public,
+              tagIds: Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [],
+              saveCount: 0,
+            }));
+            setRemoteResources(mapped);
+            try {
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(mapped));
+              }
+            } catch {
+              // ignore
+            }
+            return;
+          }
+        } catch {
+          // Fall back to /api/resources
+        }
+      }
+
+      try {
+        const res = await fetch("/api/resources");
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.resources)) {
+            setRemoteResources(json.resources);
+            try {
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(json.resources));
+              }
+            } catch {
+              // ignore
+            }
+          }
         }
       } catch {
-        // Fall back to /api/resources
+        // Ignore network errors in offline/demo mode
       }
-    }
-
-    try {
-      const res = await fetch("/api/resources");
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json.resources)) {
-          setRemoteResources(json.resources);
-        }
-      }
-    } catch {
-      // Ignore network errors in offline/demo mode
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -564,6 +598,30 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const legacy = window.localStorage.getItem("aix-vault:theme");
+        let hasExplicit = !!legacy;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.theme === "light" || parsed.theme === "dark") hasExplicit = true;
+        }
+        if (!hasExplicit) {
+          const next = e.matches ? "dark" : "light";
+          setThemeState(next);
+          document.documentElement.classList.toggle("dark", next === "dark");
+        }
+      } catch {}
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
   const setTheme = useCallback(
     (next: "light" | "dark", event?: React.MouseEvent | MouseEvent) => {
       const isReducedMotion =
@@ -573,6 +631,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       const applyTheme = () => {
         setThemeState(next);
         document.documentElement.classList.toggle("dark", next === "dark");
+      };
+
+      const persistTheme = () => {
         try {
           const current = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
           window.localStorage.setItem(
@@ -593,23 +654,45 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       ) {
         document.documentElement.classList.add("theme-transitioning");
         applyTheme();
+        persistTheme();
         window.setTimeout(() => {
           document.documentElement.classList.remove("theme-transitioning");
         }, 400);
         return;
       }
 
-      // Calculate origin coordinates for the circular expansion
-      const x = event ? event.clientX : (typeof window !== "undefined" ? window.innerWidth - 60 : 0);
-      const y = event ? event.clientY : 24;
-      const endRadius = Math.hypot(
-        Math.max(x, typeof window !== "undefined" ? window.innerWidth - x : 0),
-        Math.max(y, typeof window !== "undefined" ? window.innerHeight - y : 0),
-      );
+      // Calculate origin coordinates from the button center for a perfectly centered circular expansion
+      let x = typeof window !== "undefined" ? window.innerWidth - 60 : 0;
+      let y = 24;
+
+      if (event) {
+        const target = (event.currentTarget || event.target) as HTMLElement | null;
+        const buttonEl = target?.closest("button") || target;
+        if (buttonEl && typeof buttonEl.getBoundingClientRect === "function") {
+          const rect = buttonEl.getBoundingClientRect();
+          x = Math.round(rect.left + rect.width / 2);
+          y = Math.round(rect.top + rect.height / 2);
+        } else if (typeof event.clientX === "number" && event.clientX > 0) {
+          x = Math.round(event.clientX);
+          y = Math.round(event.clientY);
+        }
+      }
+
+      const winWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+      const winHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+      const endRadius =
+        Math.ceil(
+          Math.hypot(
+            Math.max(x, winWidth - x),
+            Math.max(y, winHeight - y),
+          ),
+        ) + 24;
 
       try {
         const transition = (document as any).startViewTransition(() => {
-          applyTheme();
+          flushSync(() => {
+            applyTheme();
+          });
         });
 
         transition.ready
@@ -624,8 +707,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
                   clipPath,
                 },
                 {
-                  duration: 450,
-                  easing: "cubic-bezier(0.2, 0, 0, 1)",
+                  duration: 480,
+                  easing: "cubic-bezier(0.25, 1, 0.5, 1)",
                   pseudoElement: "::view-transition-new(root)",
                 },
               );
@@ -636,8 +719,15 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           .catch(() => {
             // ignore
           });
+
+        transition.finished
+          .catch(() => {})
+          .finally(() => {
+            persistTheme();
+          });
       } catch {
         applyTheme();
+        persistTheme();
       }
     },
     [],
@@ -672,7 +762,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     collections,
     collectionResources,
     saveCounts,
-    theme,
     role,
   ]);
 
@@ -685,30 +774,21 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     if (!isHydratedRef.current) return;
     const currentPath = typeof window !== "undefined" ? window.location.pathname : "/";
     const params = new URLSearchParams();
-    if (navigation.kind === "all") params.set("category", "all");
-    if (navigation.kind === "category" && navigation.categoryId !== "development") {
-      params.set("category", navigation.categoryId);
-    }
     if (navigation.kind === "collection") {
       params.set("collection", navigation.collectionId);
-      if (navigation.platform && navigation.platform !== "all") {
-        params.set("platform", navigation.platform);
-      }
     }
     if (navigation.kind === "saved") {
       params.set("saved", "1");
-      if (navigation.platform && navigation.platform !== "all") {
-        params.set("platform", navigation.platform);
-      }
     }
     if (deferredSearch) params.set("search", deferredSearch);
-    if (filters.tagIds[0]) params.set("tag", filters.tagIds[0]);
-    if (view !== "grid") params.set("view", view);
-    if (sort !== "recent") params.set("sort", sort);
     const next = params.toString();
     const url = next ? `${currentPath}?${next}` : currentPath;
     window.history.replaceState(null, "", url);
-  }, [navigation, deferredSearch, filters.tagIds, view, sort]);
+  }, [
+    navigation.kind,
+    navigation.kind === "collection" ? navigation.collectionId : null,
+    deferredSearch,
+  ]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -1306,6 +1386,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
   const value: VaultContextValue = {
     resources,
+    isLoading,
     collections,
     savedIds,
     navigation,

@@ -73,7 +73,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
         type="button"
         onClick={() => handleSelect("all")}
         className={cn(
-          "flex h-7 items-center justify-center gap-1.5 rounded-full px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px]",
+          "flex h-7 shrink-0 whitespace-nowrap items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px]",
           isAll
             ? "bg-background text-foreground font-medium"
             : "text-muted-foreground hover:text-foreground",
@@ -86,7 +86,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
         type="button"
         onClick={() => handleSelect("development")}
         className={cn(
-          "flex h-7 items-center justify-center gap-1.5 rounded-full px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px]",
+          "flex h-7 shrink-0 whitespace-nowrap items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px]",
           isDev
             ? "bg-background text-foreground font-medium"
             : "text-muted-foreground hover:text-foreground",
@@ -99,7 +99,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
         type="button"
         onClick={() => handleSelect("design")}
         className={cn(
-          "flex h-7 items-center justify-center gap-1.5 rounded-full px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px]",
+          "flex h-7 shrink-0 whitespace-nowrap items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px]",
           isDesign
             ? "bg-background text-foreground font-medium"
             : "text-muted-foreground hover:text-foreground",
@@ -147,7 +147,7 @@ export function FilterPopover({
         activeCount > 0 && "text-foreground bg-subtle-background border-foreground/40",
         triggerClassName,
       )}
-      contentClassName="w-72 sm:w-80"
+      contentClassName="w-[min(calc(100vw-24px),18rem)] sm:w-80"
       label={
         iconOnly ? (
           <Tooltip label={activeCount > 0 ? `Filters (${activeCount} active)` : "Filters"}>
