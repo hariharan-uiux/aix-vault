@@ -3,6 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #111111;
   --muted-foreground: #6b6b6b;
@@ -18,6 +19,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: #0a0a0a;
   --foreground: #ededed;
   --muted-foreground: #888888;
@@ -169,5 +171,56 @@ html.theme-transitioning *::after {
 
 .indeterminate-progress {
   animation: indeterminate-bar 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Prevent browser autofill/paste from forcing a white background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--foreground) !important;
+  caret-color: var(--foreground) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--background) inset !important;
+  box-shadow: 0 0 0 1000px var(--background) inset !important;
+  transition: background-color 5000000s ease-in-out 0s !important;
+}
+
+input:autofill,
+input:autofill:hover,
+input:autofill:focus,
+input:autofill:active,
+textarea:autofill,
+textarea:autofill:hover,
+textarea:autofill:focus,
+textarea:autofill:active,
+select:autofill,
+select:autofill:hover,
+select:autofill:focus,
+select:autofill:active {
+  -webkit-text-fill-color: var(--foreground) !important;
+  caret-color: var(--foreground) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--background) inset !important;
+  box-shadow: 0 0 0 1000px var(--background) inset !important;
+  transition: background-color 5000000s ease-in-out 0s !important;
+}
+
+input[class*="bg-subtle-background"]:-webkit-autofill:not(:focus),
+textarea[class*="bg-subtle-background"]:-webkit-autofill:not(:focus) {
+  -webkit-box-shadow: 0 0 0 1000px var(--subtle-background) inset !important;
+  box-shadow: 0 0 0 1000px var(--subtle-background) inset !important;
+}
+
+input[class*="bg-subtle-background"]:autofill:not(:focus),
+textarea[class*="bg-subtle-background"]:autofill:not(:focus) {
+  -webkit-box-shadow: 0 0 0 1000px var(--subtle-background) inset !important;
+  box-shadow: 0 0 0 1000px var(--subtle-background) inset !important;
 }
 

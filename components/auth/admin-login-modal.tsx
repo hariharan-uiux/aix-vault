@@ -209,6 +209,7 @@ export function AdminLoginModal() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={isConfigured ? "admin@example.com" : "admin"}
                 required
+                autoComplete="username"
                 className="h-8 text-[12px]"
                 autoFocus
               />
@@ -222,6 +223,7 @@ export function AdminLoginModal() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                autoComplete="current-password"
                 className="h-8 text-[12px]"
               />
             </div>

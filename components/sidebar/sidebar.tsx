@@ -15,18 +15,33 @@ function MiniAppIcon({
   iconUrl?: string | null;
 }) {
   const [failed, setFailed] = useState(false);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const src = iconUrl || (domain ? faviconUrl(domain) : null);
+  const isLoaded = loadedSrc === src;
 
   return (
-    <div className="flex size-6 sm:size-7 items-center justify-center rounded-xl border border-black/10 bg-white overflow-hidden p-1 transition-all duration-300">
+    <div className="relative flex size-6 sm:size-7 items-center justify-center rounded-xl border border-black/10 bg-white overflow-hidden p-1 transition-all duration-300">
       {src && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt=""
-          className="size-full rounded-lg object-contain bg-white"
-          onError={() => setFailed(true)}
-        />
+        <>
+          {!isLoaded && (
+            <span className="absolute inset-0 flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-zinc-800/50 uppercase tracking-tight select-none">
+              {name.slice(0, 2)}
+            </span>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              "size-full rounded-lg object-contain bg-white transition-opacity duration-200",
+              isLoaded ? "opacity-100" : "opacity-0",
+            )}
+            onLoad={() => setLoadedSrc(src)}
+            onError={() => setFailed(true)}
+          />
+        </>
       ) : (
         <span className="text-[9px] sm:text-[10px] font-bold text-zinc-800 uppercase tracking-tight">
           {name.slice(0, 2)}

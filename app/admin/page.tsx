@@ -98,6 +98,7 @@ function AdminLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={isConfigured ? "admin@example.com" : "admin"}
                 required
+                autoComplete="username"
                 className="h-9 rounded-full border-border bg-subtle-background/50 px-3.5 text-[13px] focus:bg-background"
                 autoFocus
               />
@@ -118,6 +119,7 @@ function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                autoComplete="current-password"
                 className="h-9 rounded-full border-border bg-subtle-background/50 px-3.5 text-[13px] focus:bg-background"
               />
             </div>
