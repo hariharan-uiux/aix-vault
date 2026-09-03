@@ -37,7 +37,7 @@ export function Tooltip({
         <span
           role="tooltip"
           className={cn(
-            "pointer-events-none absolute z-50 whitespace-nowrap rounded-[6px] bg-foreground px-2 py-1 text-[12px] text-background shadow-[var(--shadow)]",
+            "pointer-events-none absolute z-50 whitespace-nowrap rounded-full bg-foreground px-2.5 py-1 text-[12px] text-background shadow-[var(--shadow)]",
             side === "top" && "bottom-full left-1/2 mb-2 -translate-x-1/2",
             side === "bottom" && "top-full left-1/2 mt-2 -translate-x-1/2",
           )}

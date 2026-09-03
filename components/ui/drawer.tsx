@@ -8,11 +8,15 @@ export function Drawer({
   open,
   title,
   onClose,
+  headerActions,
+  headerRight,
   children,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
+  headerActions?: ReactNode;
+  headerRight?: ReactNode;
   children: ReactNode;
 }) {
   useEffect(() => {
@@ -34,7 +38,7 @@ export function Drawer({
       <button
         aria-label="Close details"
         className={cn(
-          "absolute inset-0 bg-[var(--overlay)] transition-opacity duration-[180ms]",
+          "absolute inset-0 bg-black/25 dark:bg-black/50 backdrop-blur-[2px] transition-all duration-[180ms]",
           open ? "opacity-100" : "opacity-0",
         )}
         onClick={onClose}
@@ -45,21 +49,27 @@ export function Drawer({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "absolute right-0 top-0 flex h-full w-full max-w-[380px] flex-col border-l border-border bg-background shadow-[var(--shadow)] transition-transform duration-[240ms] ease-out max-md:max-w-none max-md:rounded-t-[10px] max-md:border-l-0 max-md:border-t md:translate-x-0",
+          "absolute right-0 top-0 flex h-full w-full max-w-[380px] sm:max-w-[400px] flex-col border-l border-border bg-background shadow-[var(--shadow)] transition-transform duration-[240ms] ease-out max-md:max-w-none max-md:rounded-t-2xl max-md:border-l-0 max-md:border-t md:translate-x-0",
           open
             ? "translate-y-0 md:translate-x-0"
             : "translate-y-full md:translate-x-full md:translate-y-0",
         )}
       >
-        <div className="flex justify-end p-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-subtle-background"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
+        <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {headerActions}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {headerRight}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-subtle-background/80 hover:text-foreground border border-border/80 transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6">{children}</div>
       </aside>

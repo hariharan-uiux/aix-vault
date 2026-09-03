@@ -17,7 +17,7 @@ export function ResourceIcon({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-border bg-subtle-background text-[12px] font-medium text-muted-foreground",
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-subtle-background text-[12px] font-medium text-muted-foreground",
       )}
       style={{ width: size, height: size }}
       aria-hidden

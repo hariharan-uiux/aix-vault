@@ -1,63 +1,73 @@
 "use client";
 
 import { ResourceIcon } from "@/components/resources/resource-icon";
-import { categoryById, tagById, typeBySlug } from "@/lib/taxonomy";
+import { getResourcePricing } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils";
 import type { Resource } from "@/types";
-import { ExternalLink } from "lucide-react";
+
+export function PricingBadge({
+  pricing,
+  className,
+}: {
+  pricing: "Free" | "Freemium";
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-7 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background px-2.5 text-[12px] font-medium text-muted-foreground",
+        className,
+      )}
+    >
+      {pricing}
+    </span>
+  );
+}
 
 export function ResourceRow({
   resource,
   selected,
   onSelect,
+  onContextMenu,
 }: {
   resource: Resource;
   selected?: boolean;
   onSelect: (id: string) => void;
+  onContextMenu?: (e: React.MouseEvent, resource: Resource) => void;
 }) {
-  const category = categoryById(resource.categoryId);
-  const type = typeBySlug(resource.type);
-  const tags = resource.tagIds
-    .slice(0, 3)
-    .map((id) => tagById(id)?.name ?? id)
-    .join(" · ");
+  const pricing = getResourcePricing(resource);
 
   return (
     <div
+      onContextMenu={(e) => onContextMenu?.(e, resource)}
       className={cn(
-        "group flex w-full items-center gap-2 border-b border-border px-2 py-2.5 text-left transition-colors duration-[120ms] hover:bg-subtle-background sm:gap-3 sm:px-3 sm:py-3",
+        "group flex w-full items-center justify-between gap-3 border-b border-border px-3 py-2.5 text-left transition-colors duration-[120ms] hover:bg-subtle-background sm:px-4 sm:py-3",
         selected && "bg-subtle-background",
       )}
     >
       <button
         type="button"
         onClick={() => onSelect(resource.id)}
-        className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3"
+        className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3 text-left focus:outline-none cursor-pointer"
       >
         <ResourceIcon resource={resource} size={32} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-medium tracking-tight sm:text-[15px]">
-            {resource.name}
-          </span>
-          <span className="mt-0.5 hidden truncate text-[13px] text-muted-foreground sm:block">
-            {resource.description}
-          </span>
-          <span className="mt-0.5 block truncate text-[11px] text-subtle-foreground sm:text-[12px]">
-            {category?.name ?? resource.categoryId}
-            {type ? ` · ${type.name}` : ""}
-            {tags ? ` · ${tags}` : ""}
-          </span>
+        <span className="min-w-0 flex-1 truncate text-[14px] font-medium tracking-tight text-foreground sm:text-[15px]">
+          {resource.name}
         </span>
       </button>
-      <a
-        href={resource.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Open ${resource.name}`}
-        className="flex size-7 shrink-0 items-center justify-center rounded-[6px] text-subtle-foreground hover:bg-background hover:text-foreground sm:size-8"
-      >
-        <ExternalLink size={14} />
-      </a>
+      <div className="flex items-center gap-2">
+        <PricingBadge pricing={pricing} />
+        <a
+          href={resource.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`View ${resource.name}`}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex h-7 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background px-3 text-[12px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-foreground hover:text-background"
+        >
+          View
+        </a>
+      </div>
     </div>
   );
 }
@@ -66,40 +76,49 @@ export function ResourceGridCard({
   resource,
   selected,
   onSelect,
+  onContextMenu,
 }: {
   resource: Resource;
   selected?: boolean;
   onSelect: (id: string) => void;
+  onContextMenu?: (e: React.MouseEvent, resource: Resource) => void;
 }) {
-  const category = categoryById(resource.categoryId);
+  const pricing = getResourcePricing(resource);
+
   return (
     <div
+      onContextMenu={(e) => onContextMenu?.(e, resource)}
       className={cn(
-        "flex flex-col gap-2 rounded-[8px] border border-border p-2.5 transition-colors duration-[120ms] hover:bg-subtle-background sm:gap-3 sm:p-3",
-        selected && "bg-subtle-background",
+        "group relative flex h-full w-full flex-col justify-between gap-3 rounded-2xl border border-border p-3.5 transition-colors duration-[120ms] hover:bg-subtle-background sm:p-4",
+        selected && "bg-subtle-background border-foreground/30",
       )}
     >
+      {/* Top: Icon and Name together */}
       <button
         type="button"
         onClick={() => onSelect(resource.id)}
-        className="flex items-start gap-2.5 text-left sm:flex-col sm:items-start sm:gap-3"
+        className="flex w-full min-w-0 cursor-pointer items-center gap-2.5 sm:gap-3 text-left focus:outline-none"
+        aria-label={`View details for ${resource.name}`}
       >
         <ResourceIcon resource={resource} size={32} />
-        <span>
-          <span className="block truncate text-[13px] font-medium sm:text-[14px]">{resource.name}</span>
-          <span className="mt-0.5 block text-[11px] text-muted-foreground sm:text-[12px]">
-            {category?.name ?? resource.categoryId}
-          </span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground sm:text-[14px]">
+          {resource.name}
         </span>
       </button>
-      <a
-        href={resource.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground sm:text-[12px]"
-      >
-        Open <ExternalLink size={12} />
-      </a>
+
+      {/* Bottom: Tag and View */}
+      <div className="flex w-full items-center justify-between gap-2">
+        <PricingBadge pricing={pricing} />
+        <a
+          href={resource.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex h-7 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background px-3 text-[12px] font-medium text-foreground transition-colors hover:border-foreground/30 hover:bg-foreground hover:text-background"
+        >
+          View
+        </a>
+      </div>
     </div>
   );
 }
@@ -108,17 +127,20 @@ export function ResourceCompactItem({
   resource,
   selected,
   onSelect,
+  onContextMenu,
 }: {
   resource: Resource;
   selected?: boolean;
   onSelect: (id: string) => void;
+  onContextMenu?: (e: React.MouseEvent, resource: Resource) => void;
 }) {
   return (
     <button
       type="button"
       onClick={() => onSelect(resource.id)}
+      onContextMenu={(e) => onContextMenu?.(e, resource)}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[6px] border border-border px-2 py-1.5 text-[12px] hover:bg-subtle-background sm:gap-2 sm:text-[13px]",
+        "inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-[12px] hover:bg-subtle-background sm:gap-2 sm:text-[13px]",
         selected && "bg-subtle-background",
       )}
     >

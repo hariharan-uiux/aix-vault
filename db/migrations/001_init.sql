@@ -4,24 +4,24 @@
 create extension if not exists pgcrypto;
 
 create table if not exists public.categories (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   name text not null,
   slug text not null unique,
   description text,
   icon text,
-  parent_id uuid references public.categories(id),
+  parent_id text references public.categories(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
 create table if not exists public.tags (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   name text not null,
   slug text not null unique,
   created_at timestamptz not null default now()
 );
 
 create table if not exists public.resources (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key default gen_random_uuid()::text,
   name text not null,
   slug text not null,
   description text,
@@ -29,7 +29,7 @@ create table if not exists public.resources (
   domain text not null,
   icon_url text,
   type text not null,
-  category_id uuid references public.categories(id),
+  category_id text references public.categories(id) on delete set null,
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -44,13 +44,13 @@ create index if not exists resources_type_idx on public.resources (type);
 create index if not exists resources_category_idx on public.resources (category_id);
 
 create table if not exists public.resource_tags (
-  resource_id uuid not null references public.resources(id) on delete cascade,
-  tag_id uuid not null references public.tags(id) on delete cascade,
+  resource_id text not null references public.resources(id) on delete cascade,
+  tag_id text not null references public.tags(id) on delete cascade,
   primary key (resource_id, tag_id)
 );
 
 create table if not exists public.collections (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key default gen_random_uuid()::text,
   name text not null,
   slug text not null,
   description text,
@@ -61,15 +61,15 @@ create table if not exists public.collections (
 );
 
 create table if not exists public.collection_resources (
-  collection_id uuid not null references public.collections(id) on delete cascade,
-  resource_id uuid not null references public.resources(id) on delete cascade,
+  collection_id text not null references public.collections(id) on delete cascade,
+  resource_id text not null references public.resources(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (collection_id, resource_id)
 );
 
 create table if not exists public.saved_resources (
   user_id uuid not null references auth.users(id) on delete cascade,
-  resource_id uuid not null references public.resources(id) on delete cascade,
+  resource_id text not null references public.resources(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (user_id, resource_id)
 );

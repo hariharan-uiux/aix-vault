@@ -1,12 +1,7 @@
 "use client";
 
 import { AppShell } from "@/components/app-shell/app-shell";
-import {
-  CategoryFilter,
-  FilterPopover,
-  SortMenu,
-  ViewToggle,
-} from "@/components/filters/filters";
+import { FloatingDock } from "@/components/dock/floating-dock";
 import { ResourceDrawer } from "@/components/resources/resource-drawer";
 import { ResourceForm } from "@/components/resources/resource-form";
 import { ResourceList } from "@/components/resources/resource-list";
@@ -23,13 +18,11 @@ function MainPane() {
     selectedId,
     selectResource,
     loadMore,
-    deferredSearch,
     navigation,
     collections,
   } = useVault();
 
   let title = "All Resources";
-  if (navigation.kind === "saved") title = "Saved";
   if (navigation.kind === "collection") {
     title =
       collections.find((item) => item.id === navigation.collectionId)?.name ??
@@ -40,35 +33,21 @@ function MainPane() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6 md:px-8">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
-        <div className="min-w-0">
-          <h1 className="text-[22px] font-medium tracking-tight sm:text-[28px]">{title}</h1>
-          <p className="mt-1 text-[12px] text-muted-foreground sm:text-[13px]">
-            {result.total} {result.total === 1 ? "resource" : "resources"}
-            {deferredSearch ? ` for "${deferredSearch}"` : ""}
-          </p>
+    <div className="w-full px-3 pt-4 pb-24 sm:px-4 sm:pt-6 sm:pb-28 md:px-6 lg:px-8">
+      {navigation.kind === "collection" ? (
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-[20px] font-medium tracking-tight sm:text-[24px]">{title}</h1>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <FilterPopover />
-          <SortMenu />
-          <div className="hidden sm:block">
-            <ViewToggle />
-          </div>
-        </div>
-      </div>
-      <div className="mb-3 sm:mb-4">
-        <CategoryFilter />
-      </div>
-      <div className="overflow-hidden rounded-[8px] border border-border">
-        <ResourceList
-          resources={result.visible}
-          view={view}
-          selectedId={selectedId}
-          loading={false}
-          onSelect={selectResource}
-        />
-      </div>
+      ) : null}
+
+      {/* Main Content Area (Cards) */}
+      <ResourceList
+        resources={result.visible}
+        view={view}
+        selectedId={selectedId}
+        loading={false}
+        onSelect={selectResource}
+      />
       {result.hasMore ? (
         <div className="flex justify-center py-4 sm:py-6">
           <Button variant="outline" onClick={loadMore}>
@@ -85,6 +64,7 @@ export function VaultApp() {
   return (
     <AppShell>
       <MainPane />
+      <FloatingDock />
       <ResourceDrawer />
       <ResourceForm />
       <SearchCommand />

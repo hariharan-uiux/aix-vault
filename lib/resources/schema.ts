@@ -20,6 +20,7 @@ export const resourceInputSchema = z.object({
   type: z.string().min(1, "Choose a type."),
   tags: z.array(z.string()).default([]),
   collectionId: z.string().optional(),
+  pricing: z.enum(["Free", "Freemium"]).optional(),
 });
 
 export type ResourceInput = z.infer<typeof resourceInputSchema>;

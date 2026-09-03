@@ -10,7 +10,7 @@ export function Input({
   return (
     <input
       className={cn(
-        "h-9 w-full rounded-[6px] border border-border bg-background px-3 text-[13px] text-foreground placeholder:text-subtle-foreground",
+        "h-9 w-full rounded-full border border-border bg-background px-3.5 text-[13px] text-foreground placeholder:text-subtle-foreground",
         className,
       )}
       {...props}

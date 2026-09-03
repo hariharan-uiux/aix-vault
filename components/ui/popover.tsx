@@ -1,16 +1,37 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
+interface PopoverContextType {
+  close: () => void;
+}
+
+const PopoverContext = createContext<PopoverContextType>({ close: () => {} });
+
+export const usePopover = () => useContext(PopoverContext);
 
 export function Popover({
   label,
   children,
   align = "right",
+  side = "bottom",
+  triggerClassName,
+  contentClassName,
 }: {
   label: ReactNode;
   children: ReactNode;
-  align?: "left" | "right";
+  align?: "left" | "right" | "center";
+  side?: "top" | "bottom";
+  triggerClassName?: string;
+  contentClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -31,25 +52,39 @@ export function Popover({
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-border px-2.5 text-[13px] text-foreground hover:bg-subtle-background"
-      >
-        {label}
-      </button>
-      {open ? (
-        <div
+    <PopoverContext.Provider value={{ close: () => setOpen(false) }}>
+      <div className="relative inline-block" ref={ref}>
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
           className={cn(
-            "absolute top-[calc(100%+6px)] z-30 min-w-[220px] rounded-[8px] border border-border bg-background p-3 shadow-[var(--shadow)] max-sm:left-0 max-sm:right-0 max-sm:min-w-0",
-            align === "right" ? "right-0 sm:right-0" : "left-0",
+            "inline-flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-[13px] text-foreground transition-colors hover:bg-subtle-background",
+            triggerClassName,
           )}
         >
-          {children}
-        </div>
-      ) : null}
-    </div>
+          {label}
+        </button>
+        {open ? (
+          <div
+            className={cn(
+              "absolute z-50 min-w-[220px] max-h-[calc(100vh-140px)] overflow-y-auto rounded-2xl border border-border bg-background p-3 shadow-2xl shadow-black/15 dark:shadow-black/50",
+              side === "top"
+                ? "bottom-[calc(100%+10px)]"
+                : "top-[calc(100%+8px)]",
+              align === "right"
+                ? "right-0"
+                : align === "center"
+                ? "left-1/2 -translate-x-1/2"
+                : "left-0",
+              contentClassName,
+            )}
+          >
+            {children}
+          </div>
+        ) : null}
+      </div>
+    </PopoverContext.Provider>
   );
 }
+

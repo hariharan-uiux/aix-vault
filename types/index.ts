@@ -37,6 +37,7 @@ export type Resource = {
   isPublic: boolean;
   tagIds: string[];
   saveCount: number;
+  pricing?: "Free" | "Freemium";
 };
 
 export type Collection = {
@@ -65,11 +66,13 @@ export type SavedResource = {
 export type ViewMode = "list" | "grid" | "compact";
 export type SortMode = "recent" | "name" | "saved";
 
+export type Platform = "all" | "development" | "design";
+
 export type Navigation =
   | { kind: "all" }
   | { kind: "category"; categoryId: string }
-  | { kind: "collection"; collectionId: string }
-  | { kind: "saved" };
+  | { kind: "collection"; collectionId: string; platform?: Platform }
+  | { kind: "saved"; platform?: Platform };
 
 export type Filters = {
   type: string | null;

@@ -124,18 +124,94 @@ export const tags: Tag[] = tagNames.map((name) => ({
 
 export const topCategories = categories.filter((category) => !category.parentId);
 
+const dynamicCategories = new Map<string, Category>();
+const deletedCategories = new Set<string>();
+
+export function registerCategory(c: Category) {
+  dynamicCategories.set(c.id, c);
+  deletedCategories.delete(c.id);
+}
+
+export function unregisterCategory(id: string) {
+  dynamicCategories.delete(id);
+  deletedCategories.add(id);
+}
+
+export function getAllCategories(customCats: Category[] = [], deletedIds: string[] = []): Category[] {
+  const deletedSet = new Set([...deletedCategories, ...deletedIds]);
+  const base = categories.filter((c) => !deletedSet.has(c.id));
+  const custom = customCats.filter((c) => !deletedSet.has(c.id) && !base.some((b) => b.id === c.id));
+  return [...base, ...custom];
+}
+
 export function categoryById(id: string) {
-  return categories.find((category) => category.id === id);
+  if (deletedCategories.has(id)) return undefined;
+  return dynamicCategories.get(id) ?? categories.find((category) => category.id === id);
 }
 
 export function childCategories(parentId: string) {
-  return categories.filter((category) => category.parentId === parentId);
+  return getAllCategories().filter((category) => category.parentId === parentId);
+}
+
+const dynamicTypes = new Map<string, ResourceType>();
+const deletedTypes = new Set<string>();
+
+export function registerResourceType(t: ResourceType) {
+  dynamicTypes.set(t.slug, t);
+  dynamicTypes.set(t.id, t);
+  deletedTypes.delete(t.slug);
+  deletedTypes.delete(t.id);
+}
+
+export function unregisterResourceType(idOrSlug: string) {
+  dynamicTypes.delete(idOrSlug);
+  deletedTypes.add(idOrSlug);
+}
+
+export function getAllResourceTypes(customTypes: ResourceType[] = [], deletedIds: string[] = []): ResourceType[] {
+  const deletedSet = new Set([...deletedTypes, ...deletedIds]);
+  const base = resourceTypes.filter((t) => !deletedSet.has(t.id) && !deletedSet.has(t.slug));
+  const custom = customTypes.filter((t) => !deletedSet.has(t.id) && !deletedSet.has(t.slug) && !base.some((b) => b.slug === t.slug));
+  return [...base, ...custom];
 }
 
 export function typeBySlug(slug: string) {
-  return resourceTypes.find((type) => type.slug === slug);
+  if (deletedTypes.has(slug)) return undefined;
+  return dynamicTypes.get(slug) ?? resourceTypes.find((type) => type.slug === slug);
 }
 
 export function tagById(id: string) {
   return tags.find((tag) => tag.id === id);
 }
+
+const FREE_RESOURCE_IDS = new Set([
+  "shadcn-ui",
+  "radix-ui",
+  "lucide",
+  "react",
+  "react-aria",
+  "tailwind",
+  "google-fonts",
+  "fontshare",
+  "unsplash",
+  "nextjs",
+  "heroicons",
+  "phosphor",
+  "storybook",
+  "inter",
+  "geist",
+  "astro",
+  "mdn",
+  "css-tricks",
+  "awwwards",
+]);
+
+
+export function getResourcePricing(resource: { id?: string; tagIds?: string[]; type?: string; pricing?: "Free" | "Freemium" }): "Free" | "Freemium" {
+  if (resource.pricing === "Free" || resource.pricing === "Freemium") return resource.pricing;
+  if (resource.id && FREE_RESOURCE_IDS.has(resource.id)) return "Free";
+  if (resource.tagIds?.includes("free") && !resource.tagIds?.includes("saas")) return "Free";
+  if (resource.type === "font" || resource.type === "article" || resource.type === "icon-library") return "Free";
+  return "Freemium";
+}
+

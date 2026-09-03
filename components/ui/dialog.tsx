@@ -32,7 +32,7 @@ export function Dialog({
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]">
       <button
         aria-label="Close"
-        className="absolute inset-0 bg-[var(--overlay)]"
+        className="absolute inset-0 bg-black/25 dark:bg-black/50 backdrop-blur-[2px] transition-opacity"
         onClick={onClose}
       />
       <div
@@ -40,7 +40,7 @@ export function Dialog({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative w-full max-w-[440px] rounded-[10px] border border-border bg-background p-5 shadow-[var(--shadow)]",
+          "relative w-full max-w-[440px] rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]",
           className,
         )}
       >
@@ -49,7 +49,7 @@ export function Dialog({
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-[6px] text-muted-foreground hover:bg-subtle-background"
+            className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-subtle-background"
             aria-label="Close dialog"
           >
             <X size={16} />

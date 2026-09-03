@@ -1,7 +1,7 @@
 import { canonicalKey } from "@/lib/utils";
 import type { Filters, Navigation, Resource, SortMode } from "@/types";
 import { matchesQuery, rankQuery } from "@/lib/search";
-import { tagById } from "@/lib/taxonomy";
+import { getResourcePricing, tagById } from "@/lib/taxonomy";
 import { PAGE_SIZE } from "@/lib/resources/schema";
 
 export function isDuplicate(resources: Resource[], url: string, ignoreId?: string) {
@@ -36,10 +36,24 @@ export function filterResources(options: {
 
   if (navigation.kind === "collection") {
     list = list.filter((resource) => collectionResourceIds.includes(resource.id));
+    if (navigation.platform && navigation.platform !== "all") {
+      list = list.filter(
+        (resource) =>
+          resource.categoryId === navigation.platform ||
+          resource.categoryId.startsWith(`${navigation.platform}-`),
+      );
+    }
   }
 
   if (navigation.kind === "saved") {
     list = list.filter((resource) => savedIds.includes(resource.id));
+    if (navigation.platform && navigation.platform !== "all") {
+      list = list.filter(
+        (resource) =>
+          resource.categoryId === navigation.platform ||
+          resource.categoryId.startsWith(`${navigation.platform}-`),
+      );
+    }
   }
 
   if (filters.type) {
@@ -54,7 +68,8 @@ export function filterResources(options: {
 
   if (filters.free) {
     list = list.filter((resource) =>
-      resource.tagIds.some((id) => tagById(id)?.slug === "free"),
+      resource.tagIds.some((id) => tagById(id)?.slug === "free") ||
+      getResourcePricing(resource) === "Free",
     );
   }
 

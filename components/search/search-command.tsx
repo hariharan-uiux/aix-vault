@@ -2,8 +2,8 @@
 
 import { ResourceIcon } from "@/components/resources/resource-icon";
 import { useVault } from "@/lib/vault/store";
-import { rankQuery } from "@/lib/search";
-import { matchesQuery } from "@/lib/search";
+import { rankQuery, matchesQuery } from "@/lib/search";
+import { categoryById, getResourcePricing } from "@/lib/taxonomy";
 import { Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -57,17 +57,20 @@ export function SearchCommand() {
     <div className="fixed inset-0 z-50 flex items-end justify-center px-3 pb-4 pt-[10vh] sm:items-start sm:px-4 sm:pt-[18vh] sm:pb-0">
       <button
         aria-label="Close search"
-        className="absolute inset-0 bg-[var(--overlay)]"
+        className="absolute inset-0 bg-black/25 dark:bg-black/50 backdrop-blur-[2px] transition-all"
         onClick={() => setCommandOpen(false)}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Search resources"
-        className="relative w-full max-w-[520px] overflow-hidden rounded-[10px] border border-border bg-background shadow-[var(--shadow)]"
+        className="relative w-full max-w-[540px] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/15 dark:shadow-black/50 animate-in fade-in-0 zoom-in-95 duration-150"
       >
-        <div className="flex items-center gap-2 border-b border-border px-3">
-          <Search size={16} className="text-subtle-foreground" />
+        {/* Header Search Bar */}
+        <div className="flex items-center gap-2.5 border-b border-border/70 px-3.5 py-2.5">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle-background border border-border/80 text-muted-foreground shadow-2xs">
+            <Search size={13} />
+          </div>
           <input
             autoFocus
             value={query}
@@ -76,52 +79,132 @@ export function SearchCommand() {
               setActive(0);
             }}
             placeholder="Search resources..."
-            className="h-12 w-full bg-transparent text-[15px] outline-none placeholder:text-subtle-foreground"
+            style={{ outline: "none", boxShadow: "none", border: "none" }}
+            className="h-9 w-full bg-transparent text-[14px] text-foreground placeholder:text-muted-foreground outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-none shadow-none p-0 m-0"
           />
-          <span className="hidden text-[11px] text-subtle-foreground sm:inline">⌘K</span>
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setActive(0);
+              }}
+              className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+          <kbd className="hidden sm:inline-flex items-center rounded-md border border-border bg-subtle-background px-1.5 py-0.5 text-[10px] font-mono font-medium text-muted-foreground shadow-2xs">
+            ESC
+          </kbd>
           <button
             type="button"
             onClick={() => setCommandOpen(false)}
-            className="flex size-8 items-center justify-center rounded-[6px] text-muted-foreground"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-subtle-background/80 hover:text-foreground border border-border/80 transition-colors cursor-pointer"
             aria-label="Close"
           >
-            <X size={14} />
+            <X size={13} />
           </button>
         </div>
-        <ul className="max-h-[320px] overflow-y-auto p-2" role="listbox">
+
+        {/* Results list */}
+        <ul className="max-h-[340px] overflow-y-auto p-1.5 space-y-0.5" role="listbox">
           {results.length === 0 ? (
-            <li className="px-3 py-8 text-center text-[13px] text-muted-foreground">
-              No resources found.
+            <li className="px-3 py-10 text-center">
+              <p className="text-[13px] font-medium text-foreground">No resources found</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">
+                Try searching for a different keyword or domain
+              </p>
             </li>
           ) : (
-            results.map((resource, index) => (
-              <li key={resource.id}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={index === active}
-                  className={`flex w-full items-center gap-3 rounded-[6px] px-2 py-2 text-left ${
-                    index === active ? "bg-subtle-background" : ""
-                  }`}
-                  onMouseEnter={() => setActive(index)}
-                  onClick={() => {
-                    selectResource(resource.id);
-                    setSearch(query);
-                    setCommandOpen(false);
-                  }}
-                >
-                  <ResourceIcon resource={resource} size={32} />
-                  <span>
-                    <span className="block text-[14px] font-medium">{resource.name}</span>
-                    <span className="block text-[12px] text-muted-foreground">
-                      {resource.domain}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))
+            results.map((resource, index) => {
+              const isSelected = index === active;
+              const category = categoryById(resource.categoryId);
+              const pricing = getResourcePricing(resource);
+
+              return (
+                <li key={resource.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left transition-colors cursor-pointer ${
+                      isSelected ? "bg-subtle-background" : "hover:bg-subtle-background/60"
+                    }`}
+                    onMouseEnter={() => setActive(index)}
+                    onClick={() => {
+                      selectResource(resource.id);
+                      setSearch(query);
+                      setCommandOpen(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <ResourceIcon resource={resource} size={32} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-[13.5px] font-medium text-foreground">
+                            {resource.name}
+                          </span>
+                          {pricing && (
+                            <span className="shrink-0 rounded-full border border-border/70 bg-subtle-background px-2 py-0.2 text-[10px] font-medium text-muted-foreground">
+                              {pricing}
+                            </span>
+                          )}
+                        </div>
+                        <span className="block truncate text-[12px] text-muted-foreground">
+                          {resource.domain || resource.url}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {category && (
+                        <span className="hidden sm:inline text-[11px] text-muted-foreground/80">
+                          {category.name}
+                        </span>
+                      )}
+                      {isSelected && (
+                        <kbd className="hidden sm:inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-background border border-border/80 shadow-2xs">
+                          ↵
+                        </kbd>
+                      )}
+                    </div>
+                  </button>
+                </li>
+              );
+            })
           )}
         </ul>
+
+        {/* Footer info bar */}
+        <div className="flex items-center justify-between border-t border-border/60 bg-subtle-background/40 px-3.5 py-2 text-[11px] text-muted-foreground">
+          <span>
+            {results.length} {results.length === 1 ? "result" : "results"}
+          </span>
+          <div className="hidden sm:flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-border bg-background px-1 py-0.2 font-mono text-[10px]">
+                ↑
+              </kbd>
+              <kbd className="rounded border border-border bg-background px-1 py-0.2 font-mono text-[10px]">
+                ↓
+              </kbd>{" "}
+              navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-border bg-background px-1.5 py-0.2 font-mono text-[10px]">
+                ↵
+              </kbd>{" "}
+              select
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-border bg-background px-1.5 py-0.2 font-mono text-[10px]">
+                esc
+              </kbd>{" "}
+              close
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
