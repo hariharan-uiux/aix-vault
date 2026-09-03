@@ -217,6 +217,9 @@ function readInitialUrl(): {
 type VaultContextValue = {
   resources: Resource[];
   isLoading: boolean;
+  isSyncing: boolean;
+  isDatabaseConnected: boolean;
+  lastSyncedAt: Date | null;
   collections: Collection[];
   savedIds: string[];
   navigation: Navigation;
@@ -322,6 +325,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string | null } | null>(null);
   const [remoteResources, setRemoteResources] = useState<Resource[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isDatabaseConnected, setIsDatabaseConnected] = useState<boolean>(() => hasSupabaseConfig());
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const isHydratedRef = useRef(false);
 
@@ -428,9 +434,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
   const refreshResources = useCallback(async () => {
     setIsLoading(true);
+    setIsSyncing(true);
     try {
       const supabase = getSupabaseClient();
       if (supabase) {
+        setIsDatabaseConnected(true);
         try {
           const { data: resData, error } = await supabase
             .from("resources")
@@ -476,6 +484,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               saveCount: 0,
             }));
             setRemoteResources(mapped);
+            setLastSyncedAt(new Date());
+            setIsDatabaseConnected(true);
             try {
               if (typeof window !== "undefined") {
                 window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(mapped));
@@ -496,6 +506,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           const json = await res.json();
           if (Array.isArray(json.resources)) {
             setRemoteResources(json.resources);
+            setLastSyncedAt(new Date());
             try {
               if (typeof window !== "undefined") {
                 window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(json.resources));
@@ -510,6 +521,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
   }, []);
 
@@ -575,7 +587,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             void refreshResources();
           },
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            setIsDatabaseConnected(true);
+          }
+        });
     }
 
     return () => {
@@ -799,6 +815,12 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         !event.metaKey &&
         !event.ctrlKey &&
         !event.altKey;
+      const isSpace =
+        (event.key === " " || event.code === "Space") &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.shiftKey;
 
       if (isCmdK) {
         event.preventDefault();
@@ -813,16 +835,33 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           (target.tagName === "INPUT" ||
             target.tagName === "TEXTAREA" ||
             target.tagName === "SELECT" ||
-            target.isContentEditable);
+            target.isContentEditable ||
+            Boolean(target.closest("input, textarea, select, [contenteditable='true']")));
         if (!isInput) {
           event.preventDefault();
           setCommandOpen(true);
+        }
+        return;
+      }
+
+      if (isSpace && isAdmin && !addOpen && !commandOpen && !selectedId && !authModalOpen) {
+        const target = event.target as HTMLElement | null;
+        const isInput =
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT" ||
+            target.isContentEditable ||
+            Boolean(target.closest("input, textarea, select, [contenteditable='true']")));
+        if (!isInput) {
+          event.preventDefault();
+          setAddOpen(true);
         }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [isAdmin, addOpen, commandOpen, selectedId, authModalOpen]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1387,6 +1426,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const value: VaultContextValue = {
     resources,
     isLoading,
+    isSyncing,
+    isDatabaseConnected,
+    lastSyncedAt,
     collections,
     savedIds,
     navigation,

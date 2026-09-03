@@ -487,13 +487,11 @@ export function Sidebar() {
         aria-label="Collections and Saved Navigation"
         className={cn(
           "fixed left-1/2 z-40 w-[calc(100vw-1.5rem)] max-w-2xl sm:max-w-3xl md:max-w-4xl -translate-x-1/2 rounded-2xl border border-border/80 dark:border-white/10 bg-background/85 dark:bg-background/85 backdrop-blur-2xl p-3 sm:p-4 shadow-2xl shadow-black/15 dark:shadow-black/60 transition-all duration-200 ease-out",
-          // Desktop: opens from top (below header)
-          "sm:top-14 sm:bottom-auto",
-          // Mobile: opens from bottom (above dock)
-          "max-sm:top-auto max-sm:bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))]",
+          // Open from bottom (above the bottom dock) on both mobile & desktop
+          "top-auto bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]",
           sidebarOpen
             ? "translate-y-0 opacity-100 scale-100 pointer-events-auto"
-            : "max-sm:translate-y-3 sm:-translate-y-3 opacity-0 scale-[0.98] pointer-events-none",
+            : "translate-y-3 opacity-0 scale-[0.98] pointer-events-none",
         )}
       >
         {/* Top Header Row: Folders Title & Count on Left, Saved Button & Close on Right */}

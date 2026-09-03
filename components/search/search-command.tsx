@@ -40,9 +40,11 @@ export function SearchCommand() {
         event.preventDefault();
         setActive((value) => Math.max(value - 1, 0));
       }
-      if (event.key === "Enter" && results[active]) {
+      if (event.key === "Enter") {
         event.preventDefault();
-        selectResource(results[active].id);
+        if (results[active]) {
+          selectResource(results[active].id);
+        }
         setSearch(query);
         setCommandOpen(false);
       }
@@ -52,6 +54,15 @@ export function SearchCommand() {
   }, [commandOpen, results, active, query, selectResource, setCommandOpen, setSearch]);
 
   if (!commandOpen) return null;
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (results[active]) {
+      selectResource(results[active].id);
+    }
+    setSearch(query);
+    setCommandOpen(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center px-2 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-[8vh] sm:items-start sm:px-4 sm:pt-[18vh] sm:pb-0">
@@ -67,12 +78,16 @@ export function SearchCommand() {
         className="relative w-full max-w-[540px] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/15 dark:shadow-black/50 animate-in fade-in-0 zoom-in-95 duration-150"
       >
         {/* Header Search Bar */}
-        <div className="flex items-center gap-2.5 border-b border-border/70 px-3.5 py-2.5">
+        <form
+          onSubmit={handleFormSubmit}
+          className="flex items-center gap-2.5 border-b border-border/70 px-3.5 py-2.5"
+        >
           <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle-background border border-border/80 text-muted-foreground shadow-2xs">
             <Search size={13} />
           </div>
           <input
             autoFocus
+            type="search"
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -88,6 +103,7 @@ export function SearchCommand() {
               onClick={() => {
                 setQuery("");
                 setActive(0);
+                setSearch("");
               }}
               className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded cursor-pointer"
             >
@@ -105,7 +121,7 @@ export function SearchCommand() {
           >
             <X size={13} />
           </button>
-        </div>
+        </form>
 
         {/* Results list */}
         <ul className="max-h-[min(340px,50vh)] overflow-y-auto overscroll-contain p-1.5 space-y-0.5" role="listbox">
@@ -173,6 +189,28 @@ export function SearchCommand() {
                 </li>
               );
             })
+          )}
+          {query.trim() && results.length > 0 && (
+            <li className="pt-1 border-t border-border/50">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-[12px] text-muted-foreground hover:text-foreground hover:bg-subtle-background/60 transition-colors cursor-pointer"
+                onClick={() => {
+                  setSearch(query.trim());
+                  setCommandOpen(false);
+                }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Search size={13} className="shrink-0 text-muted-foreground" />
+                  <span className="truncate">
+                    Filter vault for <strong className="font-semibold text-foreground">&quot;{query.trim()}&quot;</strong>
+                  </span>
+                </div>
+                <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
+                  View all
+                </span>
+              </button>
+            </li>
           )}
         </ul>
 

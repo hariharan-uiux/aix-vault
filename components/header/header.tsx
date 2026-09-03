@@ -5,7 +5,45 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useVault } from "@/lib/vault/store";
 import { cn } from "@/lib/utils";
 import { AdminLoginModal } from "@/components/auth/admin-login-modal";
-import { Coffee, Folder, FolderOpen, Loader2, Moon, Search, Shield, Sun } from "lucide-react";
+import { Coffee, Loader2, Moon, Search, Shield, Sun } from "lucide-react";
+
+function ThemeToggle({ className }: { className?: string }) {
+  const { theme, setTheme } = useVault();
+  return (
+    <Tooltip side="bottom" label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+      <button
+        type="button"
+        onClick={(e) => setTheme(theme === "dark" ? "light" : "dark", e)}
+        className={cn(
+          "relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background/50 text-muted-foreground transition-colors hover:bg-subtle-background hover:text-foreground cursor-pointer",
+          className,
+        )}
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      >
+        <span className="relative flex size-4 items-center justify-center">
+          <Sun
+            size={15}
+            className={cn(
+              "absolute transition-all duration-300 ease-out",
+              theme === "dark"
+                ? "scale-100 rotate-0 opacity-100"
+                : "scale-0 -rotate-90 opacity-0 pointer-events-none",
+            )}
+          />
+          <Moon
+            size={15}
+            className={cn(
+              "absolute transition-all duration-300 ease-out",
+              theme === "dark"
+                ? "scale-0 rotate-90 opacity-0 pointer-events-none"
+                : "scale-100 rotate-0 opacity-100",
+            )}
+          />
+        </span>
+      </button>
+    </Tooltip>
+  );
+}
 
 export function Header() {
   const {
@@ -18,12 +56,13 @@ export function Header() {
     navigation,
     result,
     deferredSearch,
-    theme,
-    setTheme,
     role,
     authModalOpen,
     setAuthModalOpen,
     isLoading,
+    isSyncing,
+    isDatabaseConnected,
+    lastSyncedAt,
   } = useVault();
 
   const isNavActive = navigation.kind === "collection";
@@ -35,20 +74,24 @@ export function Header() {
         authModalOpen ? "z-50" : "z-30",
       )}
     >
-      {/* Left: Brand with Hover Popup */}
+      {/* Left: Brand with Hover Popup & Mobile Resource Count */}
       <div className="group relative flex items-center shrink-0 sm:min-w-[140px]">
         <button
           type="button"
           onClick={() => setNavigation({ kind: "all" })}
-          className="text-[13px] font-medium tracking-[0.14em] text-foreground transition-opacity hover:opacity-80 cursor-pointer"
+          className="flex items-center gap-1.5 text-[13px] font-medium tracking-[0.14em] text-foreground transition-opacity hover:opacity-80 cursor-pointer"
         >
-          AIX VAULT
+          <span>AIX VAULT</span>
+          {/* Mobile view: resource count near AIX vault text in brackets */}
+          <span className="sm:hidden text-[12px] font-normal tracking-normal text-muted-foreground font-mono">
+            ({result.total})
+          </span>
         </button>
 
         {/* Brand hover popup */}
         <div
           role="tooltip"
-          className="pointer-events-none absolute left-0 top-[calc(100%+8px)] z-50 w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border/80 dark:border-white/10 bg-background/95 dark:bg-background/95 backdrop-blur-xl p-2.5 sm:px-3 sm:py-2.5 shadow-xl shadow-black/10 dark:shadow-black/50 opacity-0 -translate-y-1 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100"
+          className="pointer-events-none hidden md:block absolute left-0 top-[calc(100%+8px)] z-50 w-64 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border/80 dark:border-white/10 bg-background/95 dark:bg-background/95 backdrop-blur-xl p-2.5 sm:px-3 sm:py-2.5 shadow-xl shadow-black/10 dark:shadow-black/50 opacity-0 -translate-y-1 scale-95 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100"
         >
           <div className="text-[12px] font-semibold text-foreground tracking-tight">
             AI + UX = Vault
@@ -59,8 +102,8 @@ export function Header() {
         </div>
       </div>
 
-      {/* Middle: Centered Search with Folder toggle and Dark mode toggle */}
-      <div className="mx-1.5 sm:mx-4 flex flex-1 min-w-0 max-w-xs sm:max-w-md items-center gap-1.5 sm:gap-2">
+      {/* Middle: Desktop Centered Search with Folder toggle and Dark mode toggle (Desktop only) */}
+      <div className="hidden sm:flex mx-4 flex-1 min-w-0 max-w-md items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <Search
             size={14}
@@ -71,77 +114,49 @@ export function Header() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search resources..."
             aria-label="Search resources"
-            className="h-8 pl-8 pr-3 sm:pr-10 text-[13px] bg-subtle-background/50 focus:bg-background truncate"
+            className="h-8 pl-8 pr-10 text-[13px] bg-subtle-background/50 focus:bg-background truncate"
           />
           <button
             type="button"
             onClick={() => setCommandOpen(true)}
-            className="hidden sm:inline-flex absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-border px-1.5 py-0.5 text-[11px] font-mono text-subtle-foreground hover:text-foreground"
+            className="inline-flex absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-border px-1.5 py-0.5 text-[11px] font-mono text-subtle-foreground hover:text-foreground"
             aria-label="Search (/ or ⌘K)"
           >
             /
           </button>
         </div>
 
-        {/* Folder toggle button (Desktop only; on mobile it is in the bottom dock) */}
-        <div className="hidden sm:flex">
-          <Tooltip label={sidebarOpen ? "Close collections" : "Collections & Folders"}>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={cn(
-                "relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border transition-colors",
-                sidebarOpen
-                  ? "bg-subtle-background text-foreground"
-                  : "bg-subtle-background/50 text-muted-foreground hover:bg-subtle-background hover:text-foreground",
-              )}
-              aria-label={sidebarOpen ? "Close collections" : "Open collections"}
-            >
-              {sidebarOpen ? <FolderOpen size={15} /> : <Folder size={15} />}
-              {isNavActive && (
-                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-foreground" />
-              )}
-            </button>
-          </Tooltip>
-        </div>
-
-        {/* Dark mode toggle */}
-        <Tooltip label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
-          <button
-            type="button"
-            onClick={(e) => setTheme(theme === "dark" ? "light" : "dark", e)}
-            className="relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background/50 text-muted-foreground transition-colors hover:bg-subtle-background hover:text-foreground cursor-pointer"
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            <span className="relative flex size-4 items-center justify-center">
-              <Sun
-                size={15}
-                className={cn(
-                  "absolute transition-all duration-300 ease-out",
-                  theme === "dark"
-                    ? "scale-100 rotate-0 opacity-100"
-                    : "scale-0 -rotate-90 opacity-0 pointer-events-none",
-                )}
-              />
-              <Moon
-                size={15}
-                className={cn(
-                  "absolute transition-all duration-300 ease-out",
-                  theme === "dark"
-                    ? "scale-0 rotate-90 opacity-0 pointer-events-none"
-                    : "scale-100 rotate-0 opacity-100",
-                )}
-              />
-            </span>
-          </button>
-        </Tooltip>
+        {/* Dark mode toggle (Desktop) */}
+        <ThemeToggle />
       </div>
 
-      {/* Right: Profile Toggle & Resource Count */}
-      <div className="flex items-center justify-end gap-2 sm:gap-2.5 shrink-0 sm:min-w-[170px]">
+      {/* Right: Actions, Profile Toggle & Resource Count */}
+      <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 shrink-0 sm:min-w-[170px]">
+        {/* Mobile Search Icon Button */}
+        <Tooltip side="bottom" label="Search resources (/ or ⌘K)">
+          <button
+            type="button"
+            onClick={() => setCommandOpen(true)}
+            className={cn(
+              "sm:hidden relative flex size-8 shrink-0 items-center justify-center rounded-full border border-border transition-colors cursor-pointer",
+              search
+                ? "bg-subtle-background text-foreground border-foreground/30 shadow-2xs"
+                : "bg-subtle-background/50 text-muted-foreground hover:bg-subtle-background hover:text-foreground",
+            )}
+            aria-label="Search resources"
+          >
+            <Search size={15} />
+            {search && (
+              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-foreground" />
+            )}
+          </button>
+        </Tooltip>
+
+        {/* Mobile Dark mode toggle */}
+        <ThemeToggle className="sm:hidden" />
         {isLoading && result.total === 0 ? (
           <div
-            className="flex items-center gap-1.5 rounded-full border border-border/80 bg-subtle-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground select-none"
+            className="hidden sm:flex items-center gap-1.5 rounded-full border border-border/80 bg-subtle-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground select-none"
             title="Loading vault resources from Supabase..."
           >
             <Loader2 size={12} className="animate-spin text-muted-foreground" />
@@ -149,7 +164,7 @@ export function Header() {
           </div>
         ) : (
           <span
-            className="whitespace-nowrap text-[12px] font-medium text-muted-foreground tabular-nums select-none flex items-center gap-1.5"
+            className="hidden sm:flex whitespace-nowrap text-[12px] font-medium text-muted-foreground tabular-nums select-none items-center gap-1.5"
             title={`${result.total} ${result.total === 1 ? "resource" : "resources"}${deferredSearch ? ` for "${deferredSearch}"` : ""}${isLoading ? " • Syncing..." : ""}`}
           >
             {isLoading && (
@@ -160,7 +175,7 @@ export function Header() {
             )}
             <span>
               {result.total}{" "}
-              <span className="hidden sm:inline">
+              <span>
                 {result.total === 1 ? "resource" : "resources"}
               </span>
               {deferredSearch ? (
@@ -174,7 +189,7 @@ export function Header() {
 
         {/* Buy Me a Coffee icon button in viewer mode */}
         {role !== "admin" && (
-          <Tooltip label="Buy me a coffee">
+          <Tooltip side="bottom" label="Buy me a coffee">
             <a
               href="https://buymeacoffee.com/hariofficial"
               target="_blank"
@@ -187,10 +202,50 @@ export function Header() {
           </Tooltip>
         )}
 
+        {/* Minimal Supabase Database Connection & Sync Status (Admin mode only) */}
+        {role === "admin" && (
+          <Tooltip
+            side="bottom"
+            label={
+              isSyncing || isLoading
+                ? "Database: Syncing with Supabase..."
+                : isDatabaseConnected
+                  ? "Supabase database connected • Live realtime sync active"
+                  : "Database: Local storage mode"
+            }
+          >
+            <div
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-2 sm:px-2.5 py-1 text-[11px] font-medium transition-all select-none cursor-default",
+                isSyncing || isLoading
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span className="relative flex size-1.5 shrink-0">
+                {isSyncing || isLoading ? (
+                  <>
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
+                  </>
+                ) : isDatabaseConnected ? (
+                  <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                ) : (
+                  <span className="relative inline-flex size-1.5 rounded-full bg-amber-500" />
+                )}
+              </span>
+              <span className="font-mono text-[10.5px]">Supabase</span>
+              <span className="text-[10px] text-muted-foreground/80 hidden md:inline">
+                {isSyncing || isLoading ? "Syncing..." : "Connected"}
+              </span>
+            </div>
+          </Tooltip>
+        )}
+
         {/* Profile / Role Badge & Popup (only visible in Admin mode) */}
         {role === "admin" && (
           <div className="relative">
-            <Tooltip label="Admin active • Full CRUD enabled (click to manage)">
+            <Tooltip side="bottom" label="Admin active • Full CRUD enabled (click to manage)">
               <button
                 type="button"
                 data-admin-trigger="true"

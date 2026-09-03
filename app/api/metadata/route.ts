@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { cleanResourceName } from "@/lib/utils";
 
 const bodySchema = z.object({
   url: z.string().trim().min(1),
@@ -69,8 +70,10 @@ export async function POST(request: Request) {
     });
     const html = await response.text();
     const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-    const title =
+    const rawTitle =
       attr(html, "og:title") || titleMatch?.[1]?.trim() || target.hostname;
+    const siteName =
+      attr(html, "og:site_name") || attr(html, "application-name") || "";
     const description =
       attr(html, "og:description") || attr(html, "description") || "";
     const canonical =
@@ -85,9 +88,21 @@ export async function POST(request: Request) {
       "",
     );
 
+    const decodedTitle = decode(rawTitle);
+    const decodedSiteName = decode(siteName);
+    const decodedDesc = decode(description);
+
+    const { name: cleanName, tagline } = cleanResourceName(
+      decodedTitle,
+      decodedSiteName,
+      domain,
+    );
+
     return NextResponse.json({
-      title: decode(title).slice(0, 120),
-      description: description.slice(0, 280),
+      name: cleanName.slice(0, 100),
+      title: cleanName.slice(0, 100),
+      tagline: tagline ? tagline.slice(0, 200) : "",
+      description: (decodedDesc || tagline || "").slice(0, 280),
       domain,
       iconUrl: icon
         ? icon.startsWith("http")

@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { SearchableDropdown } from "@/components/ui/searchable-dropdown";
 import { categories, categoryById, resourceTypes, tags } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
-import { cn } from "@/lib/utils";
+import { cn, cleanResourceName } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Meta = {
+  name?: string;
   title: string;
+  tagline?: string;
   description: string;
   domain: string;
   iconUrl: string | null;
@@ -78,8 +80,13 @@ export function ResourceForm() {
           );
           return;
         }
-        setName((current) => current || data.title);
-        setDescription((current) => current || data.description);
+        const fetchedName = data.name || data.title;
+        const clean = cleanResourceName(fetchedName, "", data.domain);
+        setName((current) => current || clean.name);
+        const cleanDesc = data.description || clean.tagline || data.tagline || "";
+        if (cleanDesc) {
+          setDescription((current) => current || cleanDesc);
+        }
         if (data.canonicalUrl) setUrl(data.canonicalUrl);
       } catch {
         setMetaNote(

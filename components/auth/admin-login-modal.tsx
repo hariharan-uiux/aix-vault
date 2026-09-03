@@ -9,7 +9,16 @@ import { Lock, ShieldCheck, LogOut, KeyRound, X, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AdminLoginModal() {
-  const { authModalOpen, setAuthModalOpen, role, loginAsAdmin, logout, currentUser } = useVault();
+  const {
+    authModalOpen,
+    setAuthModalOpen,
+    role,
+    loginAsAdmin,
+    logout,
+    currentUser,
+    isSyncing,
+    isDatabaseConnected,
+  } = useVault();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -158,6 +167,32 @@ export function AdminLoginModal() {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="rounded-xl border border-black/[0.08] dark:border-white/[0.1] bg-black/[0.02] dark:bg-white/[0.03] p-3 flex items-center justify-between text-[11.5px]">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex size-2 shrink-0">
+                  {isSyncing ? (
+                    <>
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+                    </>
+                  ) : isDatabaseConnected ? (
+                    <span className="relative inline-flex size-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]" />
+                  ) : (
+                    <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+                  )}
+                </span>
+                <div>
+                  <p className="font-medium text-foreground">Database: Supabase</p>
+                  <p className="text-[10.5px] text-muted-foreground">
+                    {isSyncing ? "Syncing data in progress..." : "Connected & live realtime sync active"}
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                {isSyncing ? "SYNCING" : "LIVE"}
+              </span>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/60">
