@@ -63,6 +63,7 @@ export function Header() {
     isSyncing,
     isDatabaseConnected,
     lastSyncedAt,
+    syncLocalToCloud,
   } = useVault();
 
   const isNavActive = navigation.kind === "collection";
@@ -210,17 +211,21 @@ export function Header() {
               isSyncing || isLoading
                 ? "Database: Syncing with Supabase..."
                 : isDatabaseConnected
-                  ? "Supabase database connected • Live realtime sync active"
-                  : "Database: Local storage mode"
+                  ? "Supabase connected • Click to sync local data to cloud"
+                  : "Database: Local storage mode (click to retry connect)"
             }
           >
-            <div
+            <button
+              type="button"
+              onClick={() => void syncLocalToCloud()}
+              disabled={isSyncing || isLoading}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-2 sm:px-2.5 py-1 text-[11px] font-medium transition-all select-none cursor-default",
+                "flex items-center gap-1.5 rounded-full border px-2 sm:px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer disabled:cursor-not-allowed select-none",
                 isSyncing || isLoading
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                  : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:text-foreground",
+                  : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:text-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.08]",
               )}
+              aria-label="Sync with Supabase"
             >
               <span className="relative flex size-1.5 shrink-0">
                 {isSyncing || isLoading ? (
@@ -236,9 +241,9 @@ export function Header() {
               </span>
               <span className="font-mono text-[10.5px]">Supabase</span>
               <span className="text-[10px] text-muted-foreground/80 hidden md:inline">
-                {isSyncing || isLoading ? "Syncing..." : "Connected"}
+                {isSyncing || isLoading ? "Syncing..." : "Sync"}
               </span>
-            </div>
+            </button>
           </Tooltip>
         )}
 

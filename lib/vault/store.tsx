@@ -72,15 +72,7 @@ type Persisted = {
   deletedResourceTypeIds?: string[];
 };
 
-const LEGACY_DUMMY_IDS = new Set([
-  "figma", "framer", "linear", "notion", "vercel", "github", "supabase",
-  "shadcn-ui", "radix-ui", "lucide", "react", "react-aria", "tailwind",
-  "webflow", "mobbin", "awwwards", "arena", "raindrop", "savee",
-  "google-fonts", "fontshare", "unsplash", "coolors", "nextjs", "cursor",
-  "claude", "chatgpt", "v0", "midjourney", "heroicons", "phosphor",
-  "storybook", "relume", "untitled-ui", "inter", "geist", "raycast",
-  "astro", "mdn", "css-tricks", "ui-tools", "ai-tools", "dev-tools", "design-tools", "typography", "productivity"
-]);
+const LEGACY_DUMMY_IDS = new Set<string>();
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "dark";
@@ -116,15 +108,15 @@ function readInitial(): Persisted {
 
     const deletedColls = new Set<string>(parsed.deletedCollectionIds || []);
     const storedCollections: Collection[] = Array.isArray(parsed.collections)
-      ? parsed.collections.filter((c: Collection) => !deletedColls.has(c.id) && !LEGACY_DUMMY_IDS.has(c.id))
+      ? parsed.collections.filter((c: Collection) => !deletedColls.has(c.id))
       : [];
 
     const storedCollRes: CollectionResource[] = Array.isArray(parsed.collectionResources)
-      ? parsed.collectionResources.filter((cr: CollectionResource) => !LEGACY_DUMMY_IDS.has(cr.collectionId) && !LEGACY_DUMMY_IDS.has(cr.resourceId))
+      ? parsed.collectionResources
       : [];
 
     const storedExtras: Resource[] = Array.isArray(parsed.extras)
-      ? parsed.extras.filter((r: Resource) => !LEGACY_DUMMY_IDS.has(r.id))
+      ? parsed.extras
       : [];
 
     const isDemoAdmin = window.localStorage.getItem("aix-vault:demo-admin") === "true";
@@ -273,6 +265,7 @@ type VaultContextValue = {
   deleteCategory: (id: string) => void;
   addResourceType: (name: string) => ResourceType | null;
   deleteResourceType: (id: string) => void;
+  syncLocalToCloud: () => Promise<{ ok: boolean; syncedCount?: number; error?: string }>;
 };
 
 const VaultContext = createContext<VaultContextValue | null>(null);
@@ -436,6 +429,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setIsSyncing(true);
     try {
+      let fetchedResources: Resource[] = [];
       const supabase = getSupabaseClient();
       if (supabase) {
         setIsDatabaseConnected(true);
@@ -466,7 +460,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               is_public: boolean;
               resource_tags?: { tag_id: string }[];
             };
-            const mapped: Resource[] = (resData as unknown as Row[]).map((r) => ({
+            fetchedResources = (resData as unknown as Row[]).map((r) => ({
               id: r.id,
               name: r.name,
               slug: r.slug,
@@ -483,41 +477,75 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               tagIds: Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [],
               saveCount: 0,
             }));
-            setRemoteResources(mapped);
-            setLastSyncedAt(new Date());
-            setIsDatabaseConnected(true);
-            try {
-              if (typeof window !== "undefined") {
-                window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(mapped));
-              }
-            } catch {
-              // ignore
-            }
-            return;
           }
         } catch {
           // Fall back to /api/resources
         }
       }
 
-      try {
-        const res = await fetch("/api/resources");
-        if (res.ok) {
-          const json = await res.json();
-          if (Array.isArray(json.resources)) {
-            setRemoteResources(json.resources);
-            setLastSyncedAt(new Date());
-            try {
-              if (typeof window !== "undefined") {
-                window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(json.resources));
-              }
-            } catch {
-              // ignore
+      if (fetchedResources.length === 0) {
+        try {
+          const res = await fetch("/api/resources");
+          if (res.ok) {
+            const json = await res.json();
+            if (Array.isArray(json.resources)) {
+              fetchedResources = json.resources;
             }
           }
+        } catch {
+          // Ignore network errors in offline/demo mode
         }
-      } catch {
-        // Ignore network errors in offline/demo mode
+      }
+
+      if (fetchedResources.length > 0) {
+        setRemoteResources(fetchedResources);
+        setLastSyncedAt(new Date());
+        setIsDatabaseConnected(true);
+        try {
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(fetchedResources));
+          }
+        } catch {
+          // ignore
+        }
+
+        // Automatic background sync for any unsynced local extras
+        if (typeof window !== "undefined") {
+          try {
+            const raw =
+              window.localStorage.getItem(STORAGE_KEY) ||
+              window.localStorage.getItem("aix-vault:v1");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const localExtras: Resource[] = Array.isArray(parsed.extras) ? parsed.extras : [];
+              if (localExtras.length > 0) {
+                const dbIds = new Set(fetchedResources.map((r) => r.id));
+                const dbUrls = new Set(
+                  fetchedResources.map((r) => r.url.toLowerCase().replace(/\/$/, "")),
+                );
+                const unsynced = localExtras.filter((item) => {
+                  const normUrl = item.url.toLowerCase().replace(/\/$/, "");
+                  return !dbIds.has(item.id) && !dbUrls.has(normUrl);
+                });
+
+                if (unsynced.length > 0) {
+                  fetch("/api/resources/sync", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ resources: unsynced }),
+                  })
+                    .then((r) => r.json())
+                    .then((syncRes) => {
+                      if (syncRes.ok && syncRes.syncedCount > 0) {
+                        void refreshResources();
+                      }
+                    })
+                    .catch(() => {});
+                }
+              }
+            }
+          } catch {}
+        }
       }
     } finally {
       setIsLoading(false);
@@ -873,9 +901,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     const baseMap = new Map<string, Resource>();
     if (remoteResources && remoteResources.length > 0) {
       for (const item of remoteResources) {
-        if (!LEGACY_DUMMY_IDS.has(item.id)) {
-          baseMap.set(item.id, item);
-        }
+        baseMap.set(item.id, item);
       }
     }
     const baseList = Array.from(baseMap.values());
@@ -887,7 +913,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
     const baseIdSet = new Set(baseList.map((s) => s.id));
     const pureExtras = extras.filter(
-      (item) => !baseIdSet.has(item.id) && !deletedIds.includes(item.id) && !LEGACY_DUMMY_IDS.has(item.id),
+      (item) => !baseIdSet.has(item.id) && !deletedIds.includes(item.id),
     );
 
     const merged = [...pureExtras, ...fromBase];
@@ -1047,15 +1073,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         pricing: data.pricing ?? "Freemium",
       };
 
-      // Optimistic local state update
-      setExtras((current) => [resource, ...current]);
-      if (data.collectionId) {
-        setCollectionResources((current) => [
-          { collectionId: data.collectionId as string, resourceId: id, createdAt: now },
-          ...current,
-        ]);
-      }
-
       // Persist to Supabase via server API route
       try {
         const res = await fetch("/api/resources", {
@@ -1075,23 +1092,29 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         });
         const resData = await res.json();
         if (res.ok && resData.ok) {
+          // Optimistically add to local state
+          setExtras((current) => [resource, ...current]);
+          if (data.collectionId) {
+            setCollectionResources((current) => [
+              { collectionId: data.collectionId as string, resourceId: id, createdAt: now },
+              ...current,
+            ]);
+          }
           setToast("Resource added & synced.");
           await refreshResources();
+          broadcastSync();
+          return { ok: true as const };
         } else {
-          console.warn("Backend sync notice:", resData?.error);
-          if (resData?.error?.includes("invalid input syntax for type uuid")) {
-            setToast("Saved locally. Run migration 003_fix_schema.sql in Supabase.");
-          } else {
-            setToast(resData?.error ? `Synced locally (${resData.error})` : "Resource added.");
-          }
+          const errMsg = resData?.error || "Failed to save resource to database.";
+          setToast(errMsg);
+          return { ok: false as const, error: errMsg };
         }
       } catch (e) {
-        console.warn("Could not reach /api/resources, saved locally:", e);
-        setToast("Resource saved locally.");
+        const errMsg = e instanceof Error ? e.message : "Network error connecting to database";
+        console.warn("Could not reach /api/resources:", e);
+        setToast(errMsg);
+        return { ok: false as const, error: errMsg };
       }
-
-      broadcastSync();
-      return { ok: true as const };
     },
     [currentUser, isAdmin, resources, refreshResources, broadcastSync],
   );
@@ -1178,15 +1201,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       };
       setCollections((current) => [...current, collection]);
 
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from("collections").insert({
-          id: collection.id,
-          name: collection.name,
-          slug: collection.slug,
-          description: collection.description,
-        }).then();
-      }
+      fetch("/api/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collection }),
+      }).catch((e) => console.warn("Could not sync collection:", e));
 
       return collection;
     },
@@ -1210,14 +1229,13 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         ),
       );
 
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from("collections").update({
-          name: trimmed,
-          slug: slugify(trimmed),
-          updated_at: new Date().toISOString(),
-        }).eq("id", id).then();
-      }
+      fetch("/api/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collection: { id, name: trimmed, slug: slugify(trimmed) },
+        }),
+      }).catch((e) => console.warn("Could not rename collection:", e));
 
       setToast("Folder renamed.");
     },
@@ -1241,10 +1259,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         return current;
       });
 
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from("collections").delete().eq("id", id).then();
-      }
+      fetch(`/api/collections?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }).catch((e) => console.warn("Could not delete collection:", e));
 
       setToast("Folder deleted.");
     },
@@ -1292,16 +1309,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         } catch {}
       }
 
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from("categories").insert({
-          id: newCat.id,
-          name: newCat.name,
-          slug: newCat.slug,
-          description: newCat.description,
-          parent_id: newCat.parentId,
-        }).then();
-      }
+      fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCat),
+      }).catch((e) => console.warn("Could not sync category:", e));
 
       setToast(`Category "${trimmed}" added.`);
       broadcastSync();
@@ -1336,10 +1348,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         } catch {}
       }
 
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from("categories").delete().eq("id", id).then();
-      }
+      fetch(`/api/categories?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }).catch((e) => console.warn("Could not delete category:", e));
 
       setToast("Category deleted.");
       broadcastSync();
@@ -1422,6 +1433,54 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     },
     [isAdmin, broadcastSync],
   );
+
+  const syncLocalToCloud = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      let localExtras: Resource[] = extras;
+      if (typeof window !== "undefined") {
+        try {
+          const raw =
+            window.localStorage.getItem(STORAGE_KEY) ||
+            window.localStorage.getItem("aix-vault:v1");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed.extras) && parsed.extras.length > 0) {
+              localExtras = parsed.extras;
+            }
+          }
+        } catch {}
+      }
+
+      if (localExtras.length === 0) {
+        await refreshResources();
+        setToast("Database up to date.");
+        return { ok: true as const, syncedCount: 0 };
+      }
+
+      const res = await fetch("/api/resources/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resources: localExtras }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        await refreshResources();
+        setToast(`Synced ${data.syncedCount} resources to Supabase!`);
+        return { ok: true as const, syncedCount: data.syncedCount };
+      } else {
+        const error = data?.error ?? "Sync failed.";
+        setToast(error);
+        return { ok: false as const, error };
+      }
+    } catch (e) {
+      const error = e instanceof Error ? e.message : "Sync error";
+      setToast(error);
+      return { ok: false as const, error };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [extras, refreshResources]);
 
   const value: VaultContextValue = {
     resources,
@@ -1533,6 +1592,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           return current;
         }
         setToast("Added to collection.");
+        fetch("/api/collections", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "add_resource", resourceId, collectionId }),
+        }).catch(() => {});
         return [
           { collectionId, resourceId, createdAt: new Date().toISOString() },
           ...current,
@@ -1552,6 +1616,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     deleteCategory,
     addResourceType,
     deleteResourceType,
+    syncLocalToCloud,
   };
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>;
