@@ -275,12 +275,12 @@ export function SelectionDock() {
   return (
     <aside
       aria-label="Selection Toolbar"
-      className="pointer-events-none fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-40 flex items-center justify-center px-2 sm:px-4"
+      className="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-40 flex items-center justify-center px-3 sm:px-4"
     >
       <div
         className={cn(
-          "pointer-events-auto frosted-dock relative flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/15 dark:border-white/12 bg-neutral-950/95 dark:bg-[#121212]/95 p-1 sm:p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-200 animate-in fade-in zoom-in-95 select-none",
-          "max-w-[calc(100vw-1.5rem)]",
+          "pointer-events-auto frosted-dock relative flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/15 dark:border-white/12 bg-neutral-950/95 dark:bg-[#121212]/95 p-1.5 sm:p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-200 animate-in fade-in zoom-in-95 select-none",
+          "w-full max-w-[min(calc(100vw-1.5rem),24rem)] sm:w-auto sm:max-w-none justify-between sm:justify-center",
         )}
       >
         {/* 1. Toggle Select All / Checkbox Icon Button */}
@@ -294,10 +294,10 @@ export function SelectionDock() {
           <button
             type="button"
             onClick={handleToggleSelectAll}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.06] text-white transition-all cursor-pointer active:scale-95"
+            className="flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.06] text-white transition-all cursor-pointer active:scale-95"
             aria-label={allVisibleSelected ? "Deselect all" : "Select all"}
           >
-            <SquareCheck size={15} strokeWidth={1.8} className="text-white" />
+            <SquareCheck size={18} strokeWidth={1.8} className="text-white sm:size-[15px]" />
           </button>
         </Tooltip>
 
@@ -307,8 +307,8 @@ export function SelectionDock() {
         >
           <div
             className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full bg-[#ff5500] text-white font-bold leading-none shadow-xs select-none",
-              selectedCount > 99 ? "text-[11px] min-w-8 w-auto px-1.5" : "text-[13px]",
+              "flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full bg-[#ff5500] text-white font-bold leading-none shadow-xs select-none",
+              selectedCount > 99 ? "text-[12px] sm:text-[11px] min-w-10 sm:min-w-8 w-auto px-1.5" : "text-[14px] sm:text-[13px]",
             )}
           >
             {selectedCount}
@@ -316,7 +316,7 @@ export function SelectionDock() {
         </Tooltip>
 
         {/* 3. Subtle Vertical Divider */}
-        <div className="h-4 w-px bg-white/15 dark:bg-white/15 shrink-0 mx-0.5" />
+        <div className="h-5 sm:h-4 w-px bg-white/15 dark:bg-white/15 shrink-0 mx-0.5" />
 
         {/* 4. Put into Folder Action (Popover) */}
         <Popover
@@ -324,7 +324,7 @@ export function SelectionDock() {
           align="center"
           triggerClassName={({ open }) =>
             cn(
-              "flex items-center gap-2 h-8 px-3.5 sm:px-4 rounded-full border text-[13px] font-medium transition-all cursor-pointer select-none",
+              "flex items-center gap-2 h-10 sm:h-8 px-3 sm:px-4 rounded-full border text-[13.5px] sm:text-[13px] font-medium transition-all cursor-pointer select-none active:scale-95",
               open
                 ? "bg-white/[0.16] text-white border-white/25"
                 : selectedCount > 0
@@ -333,13 +333,14 @@ export function SelectionDock() {
             )
           }
           label={() => (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 sm:gap-2">
               <FolderPlus
-                size={15}
+                size={17}
                 strokeWidth={1.8}
-                className={selectedCount > 0 ? "text-neutral-200" : "text-neutral-400"}
+                className={cn("sm:size-[15px]", selectedCount > 0 ? "text-neutral-200" : "text-neutral-400")}
               />
-              <span>Put in Folder</span>
+              <span className="hidden min-[360px]:inline">Put in Folder</span>
+              <span className="min-[360px]:hidden">Folder</span>
             </span>
           )}
         >
@@ -351,9 +352,9 @@ export function SelectionDock() {
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-1.5 h-8 px-3.5 sm:px-4 rounded-full bg-white hover:bg-neutral-100 text-neutral-950 text-[13px] font-semibold shadow-sm transition-all active:scale-95 cursor-pointer select-none"
+            className="flex items-center gap-1.5 h-10 sm:h-8 px-4 sm:px-4 rounded-full bg-white hover:bg-neutral-100 text-neutral-950 text-[13.5px] sm:text-[13px] font-semibold shadow-sm transition-all active:scale-95 cursor-pointer select-none"
           >
-            <Check size={14} strokeWidth={2.5} className="text-neutral-950" />
+            <Check size={16} strokeWidth={2.5} className="text-neutral-950 sm:size-[14px]" />
             <span>Save</span>
           </button>
         </Tooltip>
@@ -363,10 +364,10 @@ export function SelectionDock() {
           <button
             type="button"
             onClick={clearSelection}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 cursor-pointer select-none"
+            className="flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 cursor-pointer select-none"
             aria-label="Close selection"
           >
-            <X size={15} strokeWidth={2} />
+            <X size={18} strokeWidth={2} className="sm:size-[15px]" />
           </button>
         </Tooltip>
       </div>

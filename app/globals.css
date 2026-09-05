@@ -148,19 +148,37 @@
   transform-origin: bottom center;
 }
 
-/* Grayscale icon by default, transition to full color on hover (disabled on touch devices) */
-@media (hover: hover) and (pointer: fine) {
-  .resource-icon-mono {
-    filter: grayscale(100%);
-    opacity: 0.88;
-    transition: filter 260ms cubic-bezier(0.16, 1, 0.3, 1),
-                opacity 260ms cubic-bezier(0.16, 1, 0.3, 1);
+/* Speed dial vertical icon pop animation */
+@keyframes speed-dial-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.75);
   }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 
+.animate-speed-dial-pop {
+  animation: speed-dial-pop 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: bottom center;
+}
+
+/* Grayscale / monochrome icon mode (active on all devices including mobile) */
+.resource-icon-mono {
+  filter: grayscale(100%) !important;
+  opacity: 0.88;
+  transition: filter 260ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* On desktop devices with mouse hover, preview original color on hover */
+@media (hover: hover) and (pointer: fine) {
   .group:hover .resource-icon-mono,
   .group:focus-within .resource-icon-mono,
   .resource-icon-mono:hover {
-    filter: grayscale(0%);
+    filter: grayscale(0%) !important;
     opacity: 1;
   }
 }

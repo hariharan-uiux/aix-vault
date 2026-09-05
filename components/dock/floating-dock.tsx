@@ -36,12 +36,14 @@ export function FloatingDock() {
   return (
     <aside
       aria-label="Quick Actions and Filters"
-      className="pointer-events-none fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-40 flex items-center justify-center gap-1.5 sm:gap-2.5 px-2 sm:px-4"
+      className="pointer-events-none fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-40 flex items-center justify-center gap-2 sm:gap-2.5 px-3 sm:px-4"
     >
       <div
         className={cn(
-          "pointer-events-auto frosted-dock relative flex items-center gap-1 sm:gap-1.5 rounded-full border border-black/10 dark:border-white/12 p-1 sm:p-1.5 transition-all duration-200",
-          isAdmin ? "max-w-[calc(100vw-4.5rem)]" : "max-w-[calc(100vw-1.5rem)]",
+          "pointer-events-auto frosted-dock relative flex items-center gap-1.5 sm:gap-1.5 rounded-full border border-black/10 dark:border-white/12 p-1.5 sm:p-1.5 transition-all duration-200 shadow-lg sm:shadow-md",
+          isAdmin
+            ? "w-full max-w-[min(calc(100vw-5.25rem),24rem)] sm:w-auto sm:max-w-none"
+            : "w-full max-w-[min(calc(100vw-2rem),22rem)] sm:w-auto sm:max-w-none",
         )}
       >
         {/* Home button when inside a folder */}
@@ -50,10 +52,10 @@ export function FloatingDock() {
             <button
               type="button"
               onClick={goBack}
-              className="flex size-8 shrink-0 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground transition-all hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground cursor-pointer"
+              className="flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground transition-all hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground cursor-pointer active:scale-95 select-none"
               aria-label="Home"
             >
-              <Home size={14} />
+              <Home size={17} className="sm:size-[14px]" />
             </button>
           </Tooltip>
         )}
@@ -62,7 +64,7 @@ export function FloatingDock() {
         <PlatformToggle />
 
         {/* Divider */}
-        <div className="h-4 w-px shrink-0 bg-border/80 mx-0.5 sm:mx-0" />
+        <div className="h-5 sm:h-4 w-px shrink-0 bg-border/80 mx-0.5 sm:mx-0" />
 
         {/* Desktop Detailed Dock Controls (All buttons directly visible in the dock) */}
         <div className="hidden sm:flex items-center gap-1 sm:gap-1.5">
@@ -122,7 +124,7 @@ export function FloatingDock() {
         </div>
 
         {/* Mobile More Button (compact dock for small screens) */}
-        <div className="sm:hidden">
+        <div className="sm:hidden flex items-center shrink-0">
           <DockMoreMenu />
         </div>
       </div>
@@ -133,10 +135,10 @@ export function FloatingDock() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="pointer-events-auto frosted-dock shrink-0 flex size-10 items-center justify-center rounded-full border border-black/10 dark:border-white/12 text-foreground transition-all duration-200 hover:bg-subtle-background hover:scale-105 active:scale-95 cursor-pointer"
+            className="pointer-events-auto frosted-dock shrink-0 flex size-11 sm:size-10 items-center justify-center rounded-full border border-black/10 dark:border-white/12 text-foreground transition-all duration-200 hover:bg-subtle-background hover:scale-105 active:scale-95 cursor-pointer shadow-lg sm:shadow-md"
             aria-label="Add resource"
           >
-            <Plus size={16} strokeWidth={2} />
+            <Plus size={19} className="sm:size-4" strokeWidth={2.2} />
           </button>
         </Tooltip>
       )}

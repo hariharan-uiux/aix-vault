@@ -25,7 +25,7 @@ function ThemeToggle({ className }: { className?: string }) {
         <button
           type="button"
           onClick={(e) => setTheme(theme === "dark" ? "light" : "dark", e)}
-          className="relative flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-subtle-background hover:text-foreground cursor-pointer"
+          className="relative flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-subtle-background hover:text-foreground active:scale-90 cursor-pointer"
           aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
           <span className="relative flex size-4 items-center justify-center">
@@ -54,28 +54,28 @@ function ThemeToggle({ className }: { className?: string }) {
       {/* Subtle Divider */}
       <div className="h-3.5 w-px shrink-0 bg-border/80 mx-0.5" />
 
-      {/* 2. Icon Mode Toggle (Dark/White Monochrome vs Color Icons) */}
+      {/* 2. Icon Mode Toggle (Black & White vs Color Icons) */}
       <Tooltip
         side="bottom"
         label={
           iconMode === "mono"
             ? "Switch to color icons"
-            : "Switch to dark/white icons"
+            : "Switch to black & white icons"
         }
       >
         <button
           type="button"
           onClick={() => setIconMode(iconMode === "mono" ? "color" : "mono")}
           className={cn(
-            "relative flex size-7 shrink-0 items-center justify-center rounded-full transition-all cursor-pointer",
-            iconMode === "color"
+            "relative flex size-7 shrink-0 items-center justify-center rounded-full transition-all active:scale-90 cursor-pointer",
+            iconMode === "mono"
               ? "text-orange-500 dark:text-orange-400 hover:bg-orange-500/10 dark:hover:bg-orange-400/10"
               : "text-muted-foreground hover:bg-subtle-background hover:text-foreground",
           )}
           aria-label={
             iconMode === "mono"
               ? "Switch to color icons"
-              : "Switch to dark/white icons"
+              : "Switch to black & white icons"
           }
         >
           <span className="relative flex size-4 items-center justify-center">

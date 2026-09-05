@@ -68,7 +68,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
   return (
     <div
       className={cn(
-        "flex h-8 items-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] p-0.5",
+        "flex h-10 sm:h-8 flex-1 sm:flex-initial min-w-0 items-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] p-0.5 sm:p-0.5",
         className,
       )}
     >
@@ -76,40 +76,40 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
         type="button"
         onClick={() => handleSelect("all")}
         className={cn(
-          "flex h-7 shrink-0 whitespace-nowrap items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px] cursor-pointer",
+          "flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[13px] sm:text-[13px] font-medium transition-all duration-[120ms] cursor-pointer active:scale-95 select-none",
           isAll
-            ? "bg-background/90 dark:bg-neutral-900/90 text-foreground font-medium shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
-            : "text-muted-foreground hover:text-foreground",
+            ? "bg-background/95 dark:bg-neutral-900/95 text-foreground font-semibold shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
+            : "text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
         )}
       >
-        <Layers size={13} />
-        <span>All</span>
+        <Layers size={15} className="shrink-0 sm:size-[13px]" />
+        <span className="truncate">All</span>
       </button>
       <button
         type="button"
         onClick={() => handleSelect("development")}
         className={cn(
-          "flex h-7 shrink-0 whitespace-nowrap items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px] cursor-pointer",
+          "flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[13px] sm:text-[13px] font-medium transition-all duration-[120ms] cursor-pointer active:scale-95 select-none",
           isDev
-            ? "bg-background/90 dark:bg-neutral-900/90 text-foreground font-medium shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
-            : "text-muted-foreground hover:text-foreground",
+            ? "bg-background/95 dark:bg-neutral-900/95 text-foreground font-semibold shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
+            : "text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
         )}
       >
-        <Code2 size={13} />
-        <span>Dev</span>
+        <Code2 size={15} className="shrink-0 sm:size-[13px]" />
+        <span className="truncate">Dev</span>
       </button>
       <button
         type="button"
         onClick={() => handleSelect("design")}
         className={cn(
-          "flex h-7 shrink-0 whitespace-nowrap items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[12px] transition-all duration-[120ms] sm:text-[13px] cursor-pointer",
+          "flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 sm:gap-1.5 rounded-full px-2 sm:px-2.5 text-[13px] sm:text-[13px] font-medium transition-all duration-[120ms] cursor-pointer active:scale-95 select-none",
           isDesign
-            ? "bg-background/90 dark:bg-neutral-900/90 text-foreground font-medium shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
-            : "text-muted-foreground hover:text-foreground",
+            ? "bg-background/95 dark:bg-neutral-900/95 text-foreground font-semibold shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
+            : "text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
         )}
       >
-        <Palette size={13} />
-        <span>Design</span>
+        <Palette size={15} className="shrink-0 sm:size-[13px]" />
+        <span className="truncate">Design</span>
       </button>
     </div>
   );

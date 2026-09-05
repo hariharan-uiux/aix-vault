@@ -93,6 +93,7 @@ function readInitial(): Persisted {
     collectionResources: [],
     saveCounts: {},
     theme: fallbackTheme,
+    iconMode: "color",
     role: "user",
     customCategories: [],
     deletedCategoryIds: [],
@@ -140,6 +141,11 @@ function readInitial(): Persisted {
         ? explicitTheme
         : fallbackTheme;
 
+    const resolvedIconMode: "mono" | "color" =
+      parsed.iconMode === "mono" || parsed.iconMode === "color"
+        ? parsed.iconMode
+        : "color";
+
     return {
       ...fallback,
       ...parsed,
@@ -152,6 +158,7 @@ function readInitial(): Persisted {
       customResourceTypes: storedCustomTypes,
       deletedResourceTypeIds: storedDeletedTypeIds,
       theme: resolvedTheme,
+      iconMode: resolvedIconMode,
       role: initialRole,
     };
   } catch {
@@ -385,10 +392,10 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           if (parsed.iconMode === "mono" || parsed.iconMode === "color") return parsed.iconMode;
         }
       } catch {
-        return "mono";
+        return "color";
       }
     }
-    return "mono";
+    return "color";
   });
 
   const setIconMode = useCallback((next: "mono" | "color") => {
@@ -441,6 +448,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
     if (Object.keys(persisted.saveCounts).length > 0) setSaveCounts(persisted.saveCounts);
     if (persisted.theme) setThemeState(persisted.theme);
+    if (persisted.iconMode) setIconModeState(persisted.iconMode);
     if (persisted.role) setRole(persisted.role);
 
     // Read cached remote resources so data & counts are instant
@@ -978,6 +986,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       const applyTheme = () => {
         setThemeState(next);
         document.documentElement.classList.toggle("dark", next === "dark");
+        persistTheme();
       };
 
       const persistTheme = () => {
@@ -1095,6 +1104,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         collectionResources,
         saveCounts,
         theme,
+        iconMode,
         role,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -1109,6 +1119,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     collections,
     collectionResources,
     saveCounts,
+    theme,
+    iconMode,
     role,
   ]);
 

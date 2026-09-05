@@ -8,11 +8,13 @@ import { useVault } from "@/lib/vault/store";
 import {
   ArrowUpDown,
   Check,
+  ChevronLeft,
   Folder,
   FolderOpen,
   MoreHorizontal,
   SlidersHorizontal,
   SquareCheck,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -65,8 +67,8 @@ export function DockMoreMenu() {
 
       const rect = dockPill.getBoundingClientRect();
       const isMobile = window.innerWidth < 640;
-      // Snug 6px gap between the top of the dock pill and the bottom of the popup
-      const bottom = Math.max(12, Math.round(window.innerHeight - rect.top + 6));
+      // Snug 8px gap between the top of the dock pill and the bottom of the popup
+      const bottom = Math.max(12, Math.round(window.innerHeight - rect.top + 8));
       const right = Math.round(window.innerWidth - rect.right);
 
       setCoords({ bottom, right, isMobile });
@@ -109,161 +111,203 @@ export function DockMoreMenu() {
       setActiveTab("none");
     } else {
       setOpen(true);
-      setActiveTab(activeFilterCount > 0 ? "filter" : "none");
+      setActiveTab("none");
     }
   };
 
   return (
     <>
-      <div className="relative inline-block" ref={menuRef}>
-        {/* Three-dot Trigger Button */}
-        <Tooltip label={open ? "Close menu" : "More options (Grid, Folders, Filters, Sort)"}>
+      <div className="relative inline-flex items-center justify-center" ref={menuRef}>
+        {/* Three-dot Trigger Button (toggles to X when open) */}
+        <Tooltip label={open ? "Close options" : "More options (Folders, Filters, Sort)"}>
           <button
             type="button"
             aria-expanded={open}
-            aria-label="More options (Grid, Folders, Filters, Sort)"
+            aria-label={open ? "Close options" : "More options (Folders, Filters, Sort)"}
             onClick={toggleOpen}
             className={cn(
-              "relative flex size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer",
+              "relative flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer active:scale-95 select-none",
               open || hasActiveState
                 ? "border-black/[0.12] dark:border-white/[0.18] bg-black/[0.08] dark:bg-white/[0.12] text-foreground shadow-2xs"
                 : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
             )}
           >
-            <MoreHorizontal size={16} />
-            {hasActiveState && (
-              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1 ring-background" />
+            {open ? (
+              <X size={18} className="transition-transform duration-200" />
+            ) : (
+              <>
+                <MoreHorizontal className="size-5 sm:size-4" />
+                {hasActiveState && (
+                  <span className="absolute top-1.5 right-1.5 sm:top-1 sm:right-1 size-2 sm:size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1.5 sm:ring-1 ring-background" />
+                )}
+              </>
             )}
           </button>
         </Tooltip>
+
+        {/* Vertical Icon Stack popping above the More button without any background or container */}
+        {open && activeTab === "none" && (
+          <div
+            className="absolute bottom-[calc(100%+10px)] left-1/2 -translate-x-1/2 flex flex-col-reverse items-center gap-2.5 z-50 pointer-events-auto"
+            role="toolbar"
+            aria-label="Quick actions"
+          >
+            {/* 1. Folders Icon Button */}
+            <Tooltip label={sidebarOpen ? "Close collections" : "Collections & Folders"}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSidebarOpen(!sidebarOpen);
+                  setOpen(false);
+                }}
+                style={{ animationDelay: "0ms" }}
+                className={cn(
+                  "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
+                  "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
+                  isNavActive
+                    ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-orange-500/10"
+                    : sidebarOpen
+                      ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
+                      : "border-black/[0.1] dark:border-white/[0.14] text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                )}
+                aria-label={sidebarOpen ? "Close collections" : "Collections & Folders"}
+              >
+                {sidebarOpen ? (
+                  <FolderOpen size={18} className={isNavActive ? "text-orange-600 dark:text-orange-400" : "text-foreground"} />
+                ) : (
+                  <Folder size={18} className={isNavActive ? "text-orange-600 dark:text-orange-400" : ""} />
+                )}
+                {isNavActive && (
+                  <span className="absolute top-1 right-1 size-2 rounded-full bg-orange-500 dark:bg-orange-400 ring-2 ring-background" />
+                )}
+              </button>
+            </Tooltip>
+
+            {/* 2. Filter Icon Button */}
+            <Tooltip label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters"}>
+              <button
+                type="button"
+                onClick={() => setActiveTab("filter")}
+                style={{ animationDelay: "35ms" }}
+                className={cn(
+                  "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
+                  "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
+                  activeFilterCount > 0
+                    ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-orange-500/10 font-semibold"
+                    : "border-black/[0.1] dark:border-white/[0.14] text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                )}
+                aria-label="Filter resources"
+              >
+                <SlidersHorizontal size={18} />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex size-4.5 items-center justify-center rounded-full bg-orange-500 text-[9.5px] font-bold text-white shadow-xs">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
+
+            {/* 3. Sort Icon Button */}
+            <Tooltip label={`Sort: ${currentSortLabel}`}>
+              <button
+                type="button"
+                onClick={() => setActiveTab("sort")}
+                style={{ animationDelay: "70ms" }}
+                className={cn(
+                  "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
+                  "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
+                  sort !== "recent"
+                    ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-orange-500/10"
+                    : "border-black/[0.1] dark:border-white/[0.14] text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                )}
+                aria-label={`Sort: ${currentSortLabel}`}
+              >
+                <ArrowUpDown size={18} />
+                {sort !== "recent" && (
+                  <span className="absolute top-1 right-1 size-2 rounded-full bg-orange-500 dark:bg-orange-400 ring-2 ring-background" />
+                )}
+              </button>
+            </Tooltip>
+
+            {/* 4. Select Button (Admin Only) */}
+            {isAdmin && (
+              <Tooltip label={isSelectMode ? "Exit selection" : "Select multiple resources"}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isSelectMode) {
+                      clearSelection();
+                    } else {
+                      setSelectMode(true);
+                    }
+                    setOpen(false);
+                  }}
+                  style={{ animationDelay: "105ms" }}
+                  className={cn(
+                    "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
+                    "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
+                    isSelectMode || selectedResourceIds.length > 0
+                      ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-orange-500/10"
+                      : "border-black/[0.1] dark:border-white/[0.14] text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                  )}
+                  aria-label="Select resources"
+                >
+                  <SquareCheck size={18} />
+                  {selectedResourceIds.length > 0 && (
+                    <span className="absolute -top-1 -right-1 flex size-4.5 items-center justify-center rounded-full bg-orange-500 text-[9.5px] font-bold text-white shadow-xs">
+                      {selectedResourceIds.length}
+                    </span>
+                  )}
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Frosted Portal Popup directly mounted to body with real backdrop-filter */}
-      {mounted && open &&
+      {/* Frosted Portal Popup ONLY when Filter or Sort subpanel is chosen */}
+      {mounted && open && activeTab !== "none" &&
         createPortal(
           <div
             ref={popupRef}
             role="dialog"
-            aria-label="More options menu"
+            aria-label={activeTab === "filter" ? "Filter options" : "Sort options"}
             style={{
-              bottom: coords ? `${coords.bottom}px` : "5rem",
-              right: coords && !coords.isMobile ? `${coords.right}px` : undefined,
+              bottom: coords ? `${coords.bottom}px` : "5.5rem",
             }}
-            className="fixed z-50 max-sm:left-1/2 max-sm:right-auto sm:left-auto w-[min(calc(100vw-24px),21rem)] rounded-3xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-3 animate-popup-from-below"
+            className="fixed z-50 left-1/2 -translate-x-1/2 w-[min(calc(100vw-24px),21.5rem)] rounded-3xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-3.5 animate-popup-from-below shadow-2xl"
           >
-            {/* Action Icons Row (Folders, Filter, Sort) */}
-            <div>
-              <div className="flex items-center gap-1.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-1 border border-black/[0.06] dark:border-white/[0.08]">
-                {/* 1. Folder Icon Button */}
+            {/* Header: Back Button + Title + Close Button */}
+            <div className="flex items-center justify-between pb-2 border-b border-black/[0.08] dark:border-white/[0.1] mb-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    setSidebarOpen(!sidebarOpen);
-                  }}
-                  className={cn(
-                    "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
-                    isNavActive
-                      ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
-                      : sidebarOpen
-                        ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground font-semibold border"
-                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                  )}
-                  aria-label={sidebarOpen ? "Close collections" : "Open collections"}
+                  onClick={() => setActiveTab("none")}
+                  className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+                  aria-label="Back to options"
                 >
-                  {sidebarOpen ? (
-                    <FolderOpen size={16} className={isNavActive ? "text-orange-600 dark:text-orange-400" : ""} />
-                  ) : (
-                    <Folder size={16} className={isNavActive ? "text-orange-600 dark:text-orange-400" : ""} />
-                  )}
-                  <span>Folders</span>
-                  {isNavActive && (
-                    <span className="size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1 ring-background" />
-                  )}
+                  <ChevronLeft size={17} />
                 </button>
-
-                {/* 2. Filter Icon Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab((prev) => (prev === "filter" ? "none" : "filter"));
-                  }}
-                  className={cn(
-                    "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
-                    activeFilterCount > 0
-                      ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
-                      : activeTab === "filter"
-                        ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground font-semibold border"
-                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                  )}
-                  aria-label="Filter resources"
-                >
-                  <SlidersHorizontal size={16} />
-                  <span>Filter</span>
-                  {activeFilterCount > 0 && (
-                    <span className="flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-semibold text-white dark:bg-orange-500">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* 3. Sort Icon Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab((prev) => (prev === "sort" ? "none" : "sort"));
-                  }}
-                  className={cn(
-                    "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
-                    sort !== "recent"
-                      ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
-                      : activeTab === "sort"
-                        ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground font-semibold border"
-                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                  )}
-                  aria-label={`Sort: ${currentSortLabel}`}
-                >
-                  <ArrowUpDown size={16} />
-                  <span>Sort</span>
-                  {sort !== "recent" && (
-                    <span className="size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1 ring-background" />
-                  )}
-                </button>
-
-                {/* 4. Select Button (Admin Only) */}
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isSelectMode) {
-                        clearSelection();
-                      } else {
-                        setSelectMode(true);
-                      }
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
-                      isSelectMode || selectedResourceIds.length > 0
-                        ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
-                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                    )}
-                    aria-label="Select resources"
-                  >
-                    <SquareCheck size={16} />
-                    <span>Select</span>
-                    {selectedResourceIds.length > 0 && (
-                      <span className="flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-semibold text-white">
-                        {selectedResourceIds.length}
-                      </span>
-                    )}
-                  </button>
-                )}
+                <span className="text-[13px] font-semibold text-foreground">
+                  {activeTab === "filter" ? "Filter Resources" : "Sort Resources"}
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  setActiveTab("none");
+                }}
+                className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={15} />
+              </button>
             </div>
 
             {/* Subpanel: Filter Options */}
             {activeTab === "filter" && (
-              <div className="pt-2.5 pb-1 px-1 border-t border-black/[0.08] dark:border-white/[0.1] mt-2 space-y-3 animate-in fade-in-0 duration-150">
+              <div className="space-y-3 animate-in fade-in-0 duration-150 text-[12.5px] pt-1 pb-0.5">
                 {/* Type Select */}
                 <label className="block">
                   <span className="mb-1 block text-[11.5px] font-medium text-muted-foreground">
@@ -275,7 +319,7 @@ export function DockMoreMenu() {
                       setFilters({ ...filters, type: e.target.value || null })
                     }
                     className={cn(
-                      "h-9 w-full rounded-full border px-3.5 text-[12.5px] focus:outline-none transition-colors",
+                      "h-9.5 w-full rounded-full border px-3.5 text-[12.5px] focus:outline-none transition-colors",
                       filters.type
                         ? "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 font-medium"
                         : "border-black/[0.08] dark:border-white/[0.12] bg-background/80 text-foreground",
@@ -335,7 +379,7 @@ export function DockMoreMenu() {
                             })
                           }
                           className={cn(
-                            "rounded-full border px-2 py-0.5 text-[11.5px] transition-colors cursor-pointer",
+                            "rounded-full border px-2.5 py-1 text-[11.5px] transition-colors cursor-pointer",
                             active
                               ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium shadow-2xs"
                               : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.1] hover:text-foreground",
@@ -372,7 +416,7 @@ export function DockMoreMenu() {
 
             {/* Subpanel: Sort Options */}
             {activeTab === "sort" && (
-              <div className="pt-2 pb-1 px-1 border-t border-black/[0.08] dark:border-white/[0.1] mt-2 flex flex-col gap-0.5 animate-in fade-in-0 duration-150">
+              <div className="flex flex-col gap-0.5 animate-in fade-in-0 duration-150 pt-1 pb-0.5">
                 <span className="mb-1 px-2 text-[11.5px] font-medium text-muted-foreground">
                   Sort resources by
                 </span>
@@ -385,10 +429,11 @@ export function DockMoreMenu() {
                       type="button"
                       onClick={() => {
                         setSort(item.id);
+                        setOpen(false);
                         setActiveTab("none");
                       }}
                       className={cn(
-                        "flex items-center justify-between rounded-full px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer",
+                        "flex items-center justify-between rounded-full px-3.5 py-2.5 text-left text-[13px] transition-colors cursor-pointer",
                         isCustomSort
                           ? "bg-orange-500/15 text-orange-600 dark:bg-orange-400/20 dark:text-orange-400 font-medium"
                           : isSelected
@@ -399,7 +444,7 @@ export function DockMoreMenu() {
                       <span>{item.label}</span>
                       {isSelected && (
                         <Check
-                          size={14}
+                          size={15}
                           className={isCustomSort ? "text-orange-600 dark:text-orange-400" : "text-foreground"}
                         />
                       )}
