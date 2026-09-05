@@ -97,46 +97,63 @@ function MainPane() {
   }, [result.hasMore, loadMore]);
 
   return (
-    <div className="w-full pb-[calc(6rem+env(safe-area-inset-bottom,0px))] sm:pb-28">
+    <div className="relative w-full pb-[calc(6rem+env(safe-area-inset-bottom,0px))] sm:pb-28">
       <div
         className={cn(
-          "mx-auto w-full max-w-[1800px]",
+          "relative mx-auto w-full max-w-[1800px]",
           isGrid
             ? "px-0 pt-0 xl:px-12 2xl:px-16"
             : "px-3 pt-4 sm:px-4 sm:pt-6 md:px-6 lg:px-8 xl:px-12 2xl:px-16",
         )}
       >
-        {navigation.kind === "collection" ? (
-          <div className="px-3 pt-4 pb-2 sm:px-4 sm:pt-6 md:px-6 xl:px-0 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <h1 className="text-[20px] font-semibold tracking-tight sm:text-[24px] truncate">{title}</h1>
-              <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-mono border border-black/10 dark:border-white/10 bg-subtle-background text-muted-foreground">
-                {result.total} {result.total === 1 ? "tool" : "tools"}
-              </span>
+        <div className="relative min-h-[calc(100dvh-3rem)] w-full">
+          {/* Background Vertical Grid Lines matching the Header and Resource Grid */}
+          {isGrid && (
+            <div
+              className="pointer-events-none absolute inset-0 -mr-px grid h-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08]"
+              aria-hidden="true"
+            >
+              <div className="h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden md:block h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden lg:block h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden xl:block h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden 2xl:block h-full border-r border-border dark:border-white/[0.08]" />
             </div>
+          )}
 
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setFolderAddOpen(true)}
-                className="flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/12 bg-black/[0.04] dark:bg-white/[0.06] text-foreground hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all duration-150 cursor-pointer shadow-sm active:scale-95 select-none"
-                title={`Add tools to ${title}`}
-                aria-label={`Add tools to ${title}`}
-              >
-                <Plus size={16} strokeWidth={2.4} />
-              </button>
-            )}
-          </div>
-        ) : null}
+          <div className="relative z-10 w-full">
+            {navigation.kind === "collection" ? (
+              <div className="px-3 pt-4 pb-2 sm:px-4 sm:pt-6 md:px-6 xl:px-0 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <h1 className="text-[20px] font-semibold tracking-tight sm:text-[24px] truncate">{title}</h1>
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-mono border border-black/10 dark:border-white/10 bg-subtle-background text-muted-foreground">
+                    {result.total} {result.total === 1 ? "tool" : "tools"}
+                  </span>
+                </div>
 
-        {/* Main Content Area */}
-        <ResourceList
-          resources={result.visible}
-          view={view}
-          selectedId={selectedId}
-          loading={isLoading && result.total === 0}
-          onSelect={selectResource}
-        />
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => setFolderAddOpen(true)}
+                    className="flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/12 bg-black/[0.04] dark:bg-white/[0.06] text-foreground hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all duration-150 cursor-pointer shadow-sm active:scale-95 select-none"
+                    title={`Add tools to ${title}`}
+                    aria-label={`Add tools to ${title}`}
+                  >
+                    <Plus size={16} strokeWidth={2.4} />
+                  </button>
+                )}
+              </div>
+            ) : null}
+
+            {/* Main Content Area */}
+            <ResourceList
+              resources={result.visible}
+              view={view}
+              selectedId={selectedId}
+              loading={isLoading && result.total === 0}
+              onSelect={selectResource}
+            />
 
         {/* Dynamic Viewport & Scroll Sentinel */}
         {result.hasMore ? (
@@ -160,6 +177,8 @@ function MainPane() {
             </span>
           </div>
         ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );

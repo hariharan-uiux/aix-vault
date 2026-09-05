@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronDown, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-export interface DropdownOption {
+interface DropdownOption {
   value: string;
   label: string;
   group?: string;

@@ -268,9 +268,26 @@ select:focus-visible {
   color: var(--background);
 }
 
-:focus-visible:not(input):not(textarea):not(select) {
+:focus-visible:not(input):not(textarea):not(select):not(.frosted-dock *):not(.frosted-dock) {
   outline: 2px solid var(--muted-foreground);
   outline-offset: 2px;
+}
+
+.frosted-dock button,
+.frosted-dock [role="button"],
+.frosted-dock a {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.frosted-dock button:focus,
+.frosted-dock button:focus-visible,
+.frosted-dock button:active,
+.frosted-dock [role="button"]:focus,
+.frosted-dock [role="button"]:focus-visible,
+.frosted-dock [role="button"]:active {
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 
 /* Fallback smooth color transitions during theme change */

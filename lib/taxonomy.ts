@@ -2,7 +2,7 @@ import type { Category, ResourceType, Tag } from "@/types";
 
 const now = "2026-01-01T00:00:00.000Z";
 
-export const resourceTypes: ResourceType[] = [
+const resourceTypes: ResourceType[] = [
   "Website",
   "Tool",
   "UI Kit",
@@ -137,8 +137,6 @@ export const tags: Tag[] = tagNames.map((name) => ({
   createdAt: now,
 }));
 
-export const topCategories = categories.filter((category) => !category.parentId);
-
 const dynamicCategories = new Map<string, Category>();
 const deletedCategories = new Set<string>();
 
@@ -150,19 +148,6 @@ export function registerCategory(c: Category) {
 export function unregisterCategory(id: string) {
   dynamicCategories.delete(id);
   deletedCategories.add(id);
-}
-
-export function updateCategory(id: string, name: string): Category | undefined {
-  const existing = categoryById(id);
-  if (!existing) return undefined;
-  const updated: Category = {
-    ...existing,
-    name,
-    description: existing.description === existing.name ? name : existing.description,
-  };
-  dynamicCategories.set(id, updated);
-  deletedCategories.delete(id);
-  return updated;
 }
 
 export function getAllCategories(customCats: Category[] = [], deletedIds: string[] = []): Category[] {
@@ -189,10 +174,6 @@ export function categoryById(id: string) {
   return dynamicCategories.get(id) ?? categories.find((category) => category.id === id);
 }
 
-export function childCategories(parentId: string) {
-  return getAllCategories().filter((category) => category.parentId === parentId);
-}
-
 const dynamicTypes = new Map<string, ResourceType>();
 const deletedTypes = new Set<string>();
 
@@ -206,20 +187,6 @@ export function registerResourceType(t: ResourceType) {
 export function unregisterResourceType(idOrSlug: string) {
   dynamicTypes.delete(idOrSlug);
   deletedTypes.add(idOrSlug);
-}
-
-export function updateResourceType(idOrSlug: string, name: string): ResourceType | undefined {
-  const existing = typeBySlug(idOrSlug);
-  if (!existing) return undefined;
-  const updated: ResourceType = {
-    ...existing,
-    name,
-  };
-  dynamicTypes.set(updated.slug, updated);
-  dynamicTypes.set(updated.id, updated);
-  deletedTypes.delete(updated.slug);
-  deletedTypes.delete(updated.id);
-  return updated;
 }
 
 export function getAllResourceTypes(customTypes: ResourceType[] = [], deletedIds: string[] = []): ResourceType[] {

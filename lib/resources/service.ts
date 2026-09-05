@@ -1,7 +1,7 @@
 import { canonicalKey } from "@/lib/utils";
 import type { Filters, Navigation, Resource, SortMode } from "@/types";
 import { matchesQuery, rankQuery } from "@/lib/search";
-import { getResourcePricing, tagById } from "@/lib/taxonomy";
+import { categoryById, getResourcePricing, tagById } from "@/lib/taxonomy";
 import { PAGE_SIZE } from "@/lib/resources/schema";
 
 export function isDuplicate(resources: Resource[], url: string, ignoreId?: string) {
@@ -11,7 +11,7 @@ export function isDuplicate(resources: Resource[], url: string, ignoreId?: strin
   );
 }
 
-export function resourceMatchesTag(resource: Resource, tagId: string): boolean {
+function resourceMatchesTag(resource: Resource, tagId: string): boolean {
   if (resource.tagIds?.includes(tagId)) return true;
   const tag = tagById(tagId);
   const term = (tag?.slug || tagId).toLowerCase().trim();
@@ -57,6 +57,21 @@ export function resourceMatchesTag(resource: Resource, tagId: string): boolean {
   return false;
 }
 
+function isResourceInCategory(resource: Resource, targetCategoryId: string): boolean {
+  const resCat = resource.categoryId || "";
+  if (!resCat || !targetCategoryId) return false;
+  if (resCat === targetCategoryId) return true;
+  if (resCat.startsWith(`${targetCategoryId}-`)) return true;
+
+  let cat = categoryById(resCat);
+  while (cat && cat.parentId) {
+    if (cat.parentId === targetCategoryId) return true;
+    if (cat.parentId.startsWith(`${targetCategoryId}-`)) return true;
+    cat = categoryById(cat.parentId);
+  }
+  return false;
+}
+
 export function filterResources(options: {
   resources: Resource[];
   navigation: Navigation;
@@ -73,32 +88,20 @@ export function filterResources(options: {
   let list = resources.filter((resource) => resource.isPublic);
 
   if (navigation.kind === "category") {
-    list = list.filter(
-      (resource) =>
-        resource.categoryId === navigation.categoryId ||
-        resource.categoryId.startsWith(`${navigation.categoryId}-`),
-    );
+    list = list.filter((resource) => isResourceInCategory(resource, navigation.categoryId));
   }
 
   if (navigation.kind === "collection") {
     list = list.filter((resource) => collectionResourceIds.includes(resource.id));
     if (navigation.platform && navigation.platform !== "all") {
-      list = list.filter(
-        (resource) =>
-          resource.categoryId === navigation.platform ||
-          resource.categoryId.startsWith(`${navigation.platform}-`),
-      );
+      list = list.filter((resource) => isResourceInCategory(resource, navigation.platform!));
     }
   }
 
   if (navigation.kind === "saved") {
     list = list.filter((resource) => savedIds.includes(resource.id));
     if (navigation.platform && navigation.platform !== "all") {
-      list = list.filter(
-        (resource) =>
-          resource.categoryId === navigation.platform ||
-          resource.categoryId.startsWith(`${navigation.platform}-`),
-      );
+      list = list.filter((resource) => isResourceInCategory(resource, navigation.platform!));
     }
   }
 

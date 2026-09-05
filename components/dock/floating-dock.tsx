@@ -52,7 +52,7 @@ export function FloatingDock() {
             <button
               type="button"
               onClick={goBack}
-              className="flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground transition-all hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground cursor-pointer active:scale-95 select-none"
+              className="flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground transition-all hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground cursor-pointer active:scale-95 select-none outline-none focus:outline-none focus-visible:outline-none"
               aria-label="Home"
             >
               <Home size={17} className="sm:size-[14px]" />
@@ -69,7 +69,7 @@ export function FloatingDock() {
             type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={cn(
-              "relative flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer active:scale-95 select-none",
+              "relative flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer active:scale-95 select-none outline-none focus:outline-none focus-visible:outline-none",
               isFolder
                 ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
                 : sidebarOpen
@@ -114,7 +114,7 @@ export function FloatingDock() {
                 type="button"
                 onClick={() => (isSelectMode ? clearSelection() : setSelectMode(true))}
                 className={cn(
-                  "relative flex size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer",
+                  "relative flex size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer outline-none focus:outline-none focus-visible:outline-none",
                   isSelectMode || selectedResourceIds.length > 0
                     ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
                     : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
@@ -142,7 +142,7 @@ export function FloatingDock() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="pointer-events-auto frosted-dock shrink-0 flex size-11 sm:size-10 items-center justify-center rounded-full border border-black/10 dark:border-white/12 text-foreground transition-all duration-200 hover:bg-subtle-background hover:scale-105 active:scale-95 cursor-pointer shadow-lg sm:shadow-md"
+            className="pointer-events-auto frosted-dock shrink-0 flex size-11 sm:size-10 items-center justify-center rounded-full border border-black/10 dark:border-white/12 text-foreground transition-all duration-200 hover:bg-subtle-background hover:scale-105 active:scale-95 cursor-pointer shadow-lg sm:shadow-md outline-none focus:outline-none focus-visible:outline-none"
             aria-label={isFolder ? "Add tool to this folder" : "Add resource"}
           >
             <Plus size={19} className="sm:size-4" strokeWidth={2.2} />

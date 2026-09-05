@@ -28,8 +28,6 @@ import {
   unregisterCategory,
   registerResourceType,
   unregisterResourceType,
-  updateCategory,
-  updateResourceType,
   categoryById,
   typeBySlug,
 } from "@/lib/taxonomy";
@@ -75,9 +73,8 @@ type Persisted = {
   deletedCategoryIds?: string[];
   customResourceTypes?: ResourceType[];
   deletedResourceTypeIds?: string[];
+  recommendedIds?: string[];
 };
-
-const LEGACY_DUMMY_IDS = new Set<string>();
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "dark";
@@ -103,6 +100,7 @@ function readInitial(): Persisted {
     deletedCategoryIds: [],
     customResourceTypes: [],
     deletedResourceTypeIds: [],
+    recommendedIds: [],
   };
   if (typeof window === "undefined") return fallback;
   try {
@@ -123,6 +121,10 @@ function readInitial(): Persisted {
 
     const storedExtras: Resource[] = Array.isArray(parsed.extras)
       ? parsed.extras
+      : [];
+
+    const storedRecommendedIds: string[] = Array.isArray(parsed.recommendedIds)
+      ? parsed.recommendedIds
       : [];
 
     const isDemoAdmin = window.localStorage.getItem("aix-vault:demo-admin") === "true";
@@ -161,6 +163,7 @@ function readInitial(): Persisted {
       deletedCategoryIds: storedDeletedCatIds,
       customResourceTypes: storedCustomTypes,
       deletedResourceTypeIds: storedDeletedTypeIds,
+      recommendedIds: storedRecommendedIds,
       theme: resolvedTheme,
       iconMode: resolvedIconMode,
       role: initialRole,
@@ -284,6 +287,7 @@ type VaultContextValue = {
   deleteCollection: (id: string) => void;
   createResource: (input: ResourceInput) => Promise<{ ok: true } | { ok: false; error: string; existingId?: string }>;
   updateResource: (id: string, patch: Partial<Resource>) => void;
+  toggleRecommendResource: (id: string, e?: React.MouseEvent) => void;
   deleteResource: (id: string) => void;
   collectionResourceIds: (id: string) => string[];
   categories: Category[];
@@ -299,7 +303,7 @@ type VaultContextValue = {
 
 const VaultContext = createContext<VaultContextValue | null>(null);
 
-export function enrichResourceTags(resource: Resource): string[] {
+function enrichResourceTags(resource: Resource): string[] {
   const tags = new Set<string>(resource.tagIds || []);
   const text = `${resource.name} ${resource.description || ""} ${resource.type || ""} ${resource.categoryId || ""}`.toLowerCase();
 
@@ -349,6 +353,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [deletedCollectionIds, setDeletedCollectionIds] = useState<string[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [recommendedIds, setRecommendedIds] = useState<string[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionResources, setCollectionResources] = useState<CollectionResource[]>([]);
   const [categories, setCategoriesState] = useState<Category[]>(() => getAllCategories());
@@ -441,6 +446,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       setDeletedCollectionIds(persisted.deletedCollectionIds);
     }
     if (persisted.savedIds.length > 0) setSavedIds(persisted.savedIds);
+    if (persisted.recommendedIds && persisted.recommendedIds.length > 0) {
+      setRecommendedIds(persisted.recommendedIds);
+    }
     if (persisted.collections.length > 0) setCollections(persisted.collections);
     if (persisted.collectionResources.length > 0) setCollectionResources(persisted.collectionResources);
     if (
@@ -532,8 +540,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const refreshResources = useCallback(async () => {
-    setIsLoading(true);
+  const refreshResources = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
     setIsSyncing(true);
     try {
       let fetchedResources: Resource[] = [];
@@ -566,24 +574,31 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               is_public: boolean;
               resource_tags?: { tag_id: string }[];
             };
-            fetchedResources = (resData as unknown as Row[]).map((r) => ({
-              id: r.id,
-              name: r.name,
-              slug: r.slug,
-              description: r.description ?? "",
-              url: r.url,
-              domain: r.domain,
-              iconUrl: r.icon_url,
-              type: r.type,
-              categoryId: r.category_id,
-              createdBy: r.created_by,
-              createdAt: r.created_at,
-              updatedAt: r.updated_at,
-              isPublic: r.is_public,
-              tagIds: Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [],
-              saveCount: 0,
-              pricing: (r as unknown as Record<string, unknown>).pricing === "Free" ? "Free" : "Freemium",
-            }));
+            fetchedResources = (resData as unknown as Row[]).map((r) => {
+              const rawTags = Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [];
+              const hasRecommendedTag = rawTags.includes("admin-recommended");
+              const cleanTags = rawTags.filter((t) => t !== "admin-recommended");
+
+              return {
+                id: r.id,
+                name: r.name,
+                slug: r.slug,
+                description: r.description ?? "",
+                url: r.url,
+                domain: r.domain,
+                iconUrl: r.icon_url,
+                type: r.type,
+                categoryId: r.category_id || "",
+                createdBy: r.created_by,
+                createdAt: r.created_at,
+                updatedAt: r.updated_at,
+                isPublic: r.is_public,
+                tagIds: cleanTags,
+                saveCount: 0,
+                pricing: (r as unknown as Record<string, unknown>).pricing === "Free" ? "Free" : "Freemium",
+                isRecommended: Boolean((r as unknown as Record<string, unknown>).is_recommended) || hasRecommendedTag,
+              };
+            });
           }
         } catch {
           // Fall back to /api/resources
@@ -668,7 +683,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         }
       }
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
       setIsSyncing(false);
     }
   }, []);
@@ -859,7 +874,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
   // Hydrate all data & listen to cross-tab BroadcastChannel & Supabase Realtime
   useEffect(() => {
-    void refreshResources();
+    const hasCache = Boolean(readRemoteCache()?.length);
+    void refreshResources(!hasCache);
     void refreshCollections();
     void refreshCategories();
     void refreshResourceTypes();
@@ -870,7 +886,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       bc = new BroadcastChannel("aix-vault-sync");
       bc.onmessage = (event) => {
         if (event.data?.type === "SYNC_RESOURCES") {
-          void refreshResources();
+          void refreshResources(false);
           void refreshCollections();
           void refreshCategories();
           void refreshResourceTypes();
@@ -880,6 +896,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             if (raw) {
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed.extras)) setExtras(parsed.extras);
+              if (Array.isArray(parsed.recommendedIds)) setRecommendedIds(parsed.recommendedIds);
             }
           } catch {
             // ignore
@@ -893,7 +910,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed.extras)) setExtras(parsed.extras);
-          void refreshResources();
+          if (Array.isArray(parsed.recommendedIds)) setRecommendedIds(parsed.recommendedIds);
+          void refreshResources(false);
           void refreshCollections();
         } catch {
           // ignore
@@ -911,7 +929,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           "postgres_changes",
           { event: "*", schema: "public", table: "resources" },
           () => {
-            void refreshResources();
+            void refreshResources(false);
           },
         )
         .on(
@@ -1129,6 +1147,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         theme,
         iconMode,
         role,
+        recommendedIds,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
@@ -1145,6 +1164,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     theme,
     iconMode,
     role,
+    recommendedIds,
   ]);
 
   useEffect(() => {
@@ -1158,17 +1178,25 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams();
     if (navigation.kind === "collection") {
       params.set("collection", navigation.collectionId);
+      if (navigation.platform && navigation.platform !== "all") {
+        params.set("platform", navigation.platform);
+      }
     }
     if (navigation.kind === "saved") {
       params.set("saved", "1");
+      if (navigation.platform && navigation.platform !== "all") {
+        params.set("platform", navigation.platform);
+      }
+    }
+    if (navigation.kind === "category") {
+      params.set("category", navigation.categoryId);
     }
     if (deferredSearch) params.set("search", deferredSearch);
     const next = params.toString();
     const url = next ? `${currentPath}?${next}` : currentPath;
     window.history.replaceState(null, "", url);
   }, [
-    navigation.kind,
-    navigation.kind === "collection" ? navigation.collectionId : null,
+    navigation,
     deferredSearch,
   ]);
 
@@ -1263,10 +1291,12 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     const merged = [...pureExtras, ...fromBase];
     return merged.map((resource) => ({
       ...resource,
+      categoryId: resource.categoryId || "",
+      isRecommended: Boolean(resource.isRecommended) || recommendedIds.includes(resource.id),
       tagIds: enrichResourceTags(resource),
       saveCount: saveCounts[resource.id] ?? resource.saveCount,
     }));
-  }, [deletedIds, extras, remoteResources, saveCounts]);
+  }, [deletedIds, extras, remoteResources, saveCounts, recommendedIds]);
 
   const collectionResourceIds = useCallback(
     (id: string) =>
@@ -1418,6 +1448,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         tagIds: finalTags,
         saveCount: 0,
         pricing: data.pricing ?? "Freemium",
+        isRecommended: Boolean(data.isRecommended),
       };
 
       // Persist to Supabase via server API route
@@ -1436,12 +1467,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             tags: finalTags,
             collectionId: data.collectionId || undefined,
             createdBy: currentUser?.id || undefined,
+            isRecommended: Boolean(data.isRecommended),
           }),
         });
         const resData = await res.json();
         if (res.ok && resData.ok) {
           // Optimistically add to local state
           setExtras((current) => [resource, ...current]);
+          if (data.isRecommended) {
+            setRecommendedIds((current) => (current.includes(id) ? current : [...current, id]));
+          }
           if (data.collectionId) {
             setCollectionResources((current) => [
               { collectionId: data.collectionId as string, resourceId: id, createdAt: now },
@@ -1449,7 +1484,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             ]);
           }
           setToast("Resource added & synced.");
-          await refreshResources();
+          await refreshResources(false);
           broadcastSync();
           return { ok: true as const };
         } else {
@@ -1474,6 +1509,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      if (patch.isRecommended !== undefined) {
+        setRecommendedIds((current) => {
+          if (patch.isRecommended) {
+            return current.includes(id) ? current : [...current, id];
+          } else {
+            return current.filter((item) => item !== id);
+          }
+        });
+      }
+
       setExtras((current) => {
         const exists = current.some((item) => item.id === id);
         if (exists) {
@@ -1492,7 +1537,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id, patch }),
         });
-        await refreshResources();
+        await refreshResources(false);
       } catch (e) {
         console.warn("Could not sync update to backend:", e);
       }
@@ -1503,6 +1548,55 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     [isAdmin, remoteResources, refreshResources, broadcastSync],
   );
 
+  const toggleRecommendResource = useCallback(
+    async (id: string, e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      e?.preventDefault();
+      if (!isAdmin) {
+        setToast("Admin profile required to recommend tools.");
+        return;
+      }
+      const target = resources.find((r) => r.id === id);
+      if (!target) return;
+      const currentRecommended = Boolean(target.isRecommended) || recommendedIds.includes(id);
+      const nextVal = !currentRecommended;
+
+      setRecommendedIds((current) => {
+        if (nextVal) {
+          return current.includes(id) ? current : [...current, id];
+        } else {
+          return current.filter((item) => item !== id);
+        }
+      });
+
+      setExtras((current) => {
+        const exists = current.some((item) => item.id === id);
+        if (exists) {
+          return current.map((item) =>
+            item.id === id ? { ...item, isRecommended: nextVal, updatedAt: new Date().toISOString() } : item,
+          );
+        }
+        return [...current, { ...target, isRecommended: nextVal, updatedAt: new Date().toISOString() }];
+      });
+
+      setToast(nextVal ? "Marked as Admin Recommendation." : "Removed from Admin Recommendations.");
+
+      try {
+        await fetch("/api/resources", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, patch: { isRecommended: nextVal } }),
+        });
+        await refreshResources(false);
+      } catch (err) {
+        console.warn("Could not sync recommendation:", err);
+      }
+
+      broadcastSync();
+    },
+    [isAdmin, resources, recommendedIds, refreshResources, broadcastSync],
+  );
+
   const deleteResource = useCallback(
     async (id: string) => {
       if (!isAdmin) {
@@ -1511,6 +1605,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       }
 
       setExtras((current) => current.filter((item) => item.id !== id));
+      setRecommendedIds((current) => current.filter((item) => item !== id));
       setDeletedIds((current) => (current.includes(id) ? current : [...current, id]));
       setSelectedId(null);
 
@@ -1518,7 +1613,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         await fetch(`/api/resources?id=${encodeURIComponent(id)}`, {
           method: "DELETE",
         });
-        await refreshResources();
+        await refreshResources(false);
       } catch (e) {
         console.warn("Could not sync deletion to backend:", e);
       }
@@ -2292,6 +2387,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     deleteCollection,
     createResource,
     updateResource,
+    toggleRecommendResource,
     deleteResource,
     collectionResourceIds,
     categories,

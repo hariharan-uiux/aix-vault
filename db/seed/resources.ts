@@ -1,6 +1,6 @@
 import { categories, tags as tagCatalog } from "@/lib/taxonomy";
 import { domainFromUrl, slugify } from "@/lib/utils";
-import type { Collection, CollectionResource, Resource } from "@/types";
+import type { Resource } from "@/types";
 
 const stamp = "2026-03-12T10:00:00.000Z";
 
@@ -88,44 +88,4 @@ export const seedResources: Resource[] = [
   resource("astro", "Astro", "https://astro.build", "Web framework for content-driven sites", "library", cat("development-javascript"), t("web", "open-source")),
   resource("mdn", "MDN Web Docs", "https://developer.mozilla.org", "Web platform documentation", "article", cat("development-documentation"), t("web", "free")),
   resource("css-tricks", "CSS-Tricks", "https://css-tricks.com", "Guides and articles for CSS and front-end", "article", cat("development-documentation"), t("css", "web")),
-];
-
-export const seedCollections: Collection[] = [
-  {
-    id: "dev-tools",
-    name: "Developer Tools",
-    slug: "dev-tools",
-    description: "Development platforms, libraries, and tools",
-    icon: null,
-    createdBy: null,
-    createdAt: stamp,
-    updatedAt: stamp,
-  },
-  {
-    id: "design-tools",
-    name: "Design Tools",
-    slug: "design-tools",
-    description: "Interface design, icons, and visual craft",
-    icon: null,
-    createdBy: null,
-    createdAt: stamp,
-    updatedAt: stamp,
-  },
-];
-
-export const seedCollectionResources: CollectionResource[] = [
-  ...["github", "vercel", "supabase", "linear", "react", "tailwind", "nextjs", "cursor", "claude", "chatgpt", "storybook", "raycast", "astro", "mdn", "css-tricks"].map(
-    (resourceId) => ({
-      collectionId: "dev-tools",
-      resourceId,
-      createdAt: stamp,
-    }),
-  ),
-  ...["figma", "framer", "webflow", "shadcn-ui", "radix-ui", "lucide", "untitled-ui", "mobbin", "google-fonts", "fontshare", "coolors", "v0", "midjourney", "heroicons", "phosphor", "relume", "inter", "geist", "unsplash", "awwwards", "arena", "savee"].map(
-    (resourceId) => ({
-      collectionId: "design-tools",
-      resourceId,
-      createdAt: stamp,
-    }),
-  ),
 ];

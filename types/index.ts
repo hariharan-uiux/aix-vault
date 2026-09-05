@@ -38,6 +38,7 @@ export type Resource = {
   tagIds: string[];
   saveCount: number;
   pricing?: "Free" | "Freemium";
+  isRecommended?: boolean;
 };
 
 export type Collection = {
@@ -53,12 +54,6 @@ export type Collection = {
 
 export type CollectionResource = {
   collectionId: string;
-  resourceId: string;
-  createdAt: string;
-};
-
-export type SavedResource = {
-  userId: string;
   resourceId: string;
   createdAt: string;
 };

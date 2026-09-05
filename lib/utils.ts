@@ -129,3 +129,17 @@ export function cleanResourceName(
   // 4. Default: first part is the name, remainder is tagline
   return { name: first, tagline: parts.slice(1).join(" - ") };
 }
+
+export function decodeHtmlEntities(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/&#0*39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, "/");
+}
+

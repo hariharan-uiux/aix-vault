@@ -81,7 +81,28 @@ export function FolderAddToolsDialog() {
     });
   }, [resources, folderResourceIds, tab, query]);
 
-  if (!folderAddOpen || !activeCollectionId || !isAdmin) {
+  const [mounted, setMounted] = useState(folderAddOpen);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (folderAddOpen) {
+      setMounted(true);
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setVisible(true);
+        });
+      });
+      return () => cancelAnimationFrame(raf);
+    } else {
+      setVisible(false);
+      const timer = setTimeout(() => {
+        setMounted(false);
+      }, 320);
+      return () => clearTimeout(timer);
+    }
+  }, [folderAddOpen]);
+
+  if (!mounted || !activeCollectionId || !isAdmin) {
     return null;
   }
 
@@ -99,30 +120,39 @@ export function FolderAddToolsDialog() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-50 overflow-hidden flex items-end justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-[2px] transition-opacity duration-200"
+        className={cn(
+          "absolute inset-0 bg-black/40 dark:bg-black/65 backdrop-blur-[2px] transition-opacity duration-300 ease-out",
+          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+        )}
         onClick={() => setFolderAddOpen(false)}
-        aria-label="Close panel"
+        aria-hidden="true"
       />
 
-      {/* Side Panel */}
+      {/* Centered Bottom Sheet Panel */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={`Add tools to ${folderName}`}
+        style={{
+          transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
         className={cn(
-          "absolute right-0 top-0 flex h-full w-full max-w-full sm:max-w-[440px] md:max-w-[460px] lg:max-w-[480px] flex-col border-l border-border bg-background shadow-2xl transition-transform ease-out",
-          "animate-in slide-in-from-right duration-200",
-          "max-md:top-auto max-md:bottom-0 max-md:h-[88dvh] max-md:max-h-[88dvh] max-md:rounded-t-3xl max-md:border-l-0 max-md:border-t max-md:shadow-[0_-8px_30px_rgba(0,0,0,0.15)] max-md:slide-in-from-bottom",
+          "relative z-10 flex w-full max-w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl flex-col",
+          "rounded-t-[28px] sm:rounded-t-[32px] border-t sm:border-x border-border/80 dark:border-white/12",
+          "bg-background/95 dark:bg-[#121318]/95 backdrop-blur-2xl shadow-[0_-12px_44px_rgba(0,0,0,0.25)] dark:shadow-[0_-12px_44px_rgba(0,0,0,0.7)]",
+          "h-[88dvh] max-h-[88dvh] will-change-transform",
+          "transition-all duration-[320ms]",
+          visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-90",
         )}
       >
-        {/* Mobile Pull Handle */}
-        <div className="mx-auto mt-2.5 -mb-0.5 h-1 w-9 rounded-full bg-muted-foreground/30 md:hidden shrink-0" />
+        {/* Pull Handle */}
+        <div className="mx-auto mt-2.5 -mb-0.5 h-1.5 w-10 rounded-full bg-muted-foreground/30 shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/80 px-4 py-3 sm:px-5 shrink-0">
+        <div className="flex items-center justify-between border-b border-border dark:border-white/10 px-4 py-3 sm:px-5 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
               <Folder size={16} />

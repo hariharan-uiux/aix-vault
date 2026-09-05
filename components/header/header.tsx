@@ -134,13 +134,13 @@ export function Header() {
         <div className="relative h-full w-full">
           {/* Background Grid Lines matching the Resource Grid below */}
           {view === "grid" && (
-            <div className="pointer-events-none absolute inset-0 -mr-px grid h-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 xl:border-l xl:border-r border-border">
-              <div className="h-full border-r border-border" />
-              <div className="h-full border-r border-border" />
-              <div className="hidden md:block h-full border-r border-border" />
-              <div className="hidden lg:block h-full border-r border-border" />
-              <div className="hidden xl:block h-full border-r border-border" />
-              <div className="hidden 2xl:block h-full border-r border-border" />
+            <div className="pointer-events-none absolute inset-0 -mr-px grid h-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08]">
+              <div className="h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden md:block h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden lg:block h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden xl:block h-full border-r border-border dark:border-white/[0.08]" />
+              <div className="hidden 2xl:block h-full border-r border-border dark:border-white/[0.08]" />
             </div>
           )}
 
@@ -241,14 +241,8 @@ export function Header() {
         ) : (
           <span
             className="hidden sm:flex whitespace-nowrap text-[12px] font-medium text-muted-foreground tabular-nums select-none items-center gap-1.5"
-            title={`${result.total} ${result.total === 1 ? "resource" : "resources"}${deferredSearch ? ` for "${deferredSearch}"` : ""}${isLoading ? " • Syncing..." : ""}`}
+            title={`${result.total} ${result.total === 1 ? "resource" : "resources"}${deferredSearch ? ` for "${deferredSearch}"` : ""}`}
           >
-            {isLoading && (
-              <span className="relative flex size-1.5" title="Syncing with Supabase">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-emerald-500" />
-              </span>
-            )}
             <span>
               {result.total}{" "}
               <span>

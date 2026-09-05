@@ -7,7 +7,7 @@ import { SearchableDropdown } from "@/components/ui/searchable-dropdown";
 import { categoryById, tags } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
 import { cn, cleanResourceName } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Meta = {
@@ -46,6 +46,7 @@ export function ResourceForm() {
   const [categoryId, setCategoryId] = useState(defaultCategory);
   const [type, setType] = useState("tool");
   const [pricing, setPricing] = useState<"Free" | "Freemium">("Freemium");
+  const [isRecommended, setIsRecommended] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [collectionId, setCollectionId] = useState(defaultCollectionId);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +142,7 @@ export function ResourceForm() {
     setCategoryId(defaultCategory);
     setType("tool");
     setPricing("Freemium");
+    setIsRecommended(false);
     setSelectedTags([]);
     setCollectionId(navigation.kind === "collection" ? navigation.collectionId : "");
     setError(null);
@@ -148,6 +150,13 @@ export function ResourceForm() {
     setMetaNote(null);
     setSubmitting(false);
   }
+
+  const [hasOpened, setHasOpened] = useState(false);
+  useEffect(() => {
+    if (addOpen) setHasOpened(true);
+  }, [addOpen]);
+
+  if (!hasOpened) return null;
 
   const currentCollection =
     navigation.kind === "collection"
@@ -190,6 +199,7 @@ export function ResourceForm() {
               pricing,
               tags: selectedTags,
               collectionId: collectionId || undefined,
+              isRecommended,
             });
             if (!result.ok) {
               setError(result.error);
@@ -388,6 +398,62 @@ export function ResourceForm() {
             })}
           </div>
         </div>
+
+        {/* Admin Recommendation Toggle */}
+        {isAdmin && (
+          <div
+            onClick={() => setIsRecommended((prev) => !prev)}
+            className={cn(
+              "flex items-center justify-between rounded-xl border p-2.5 sm:p-3 transition-all cursor-pointer select-none",
+              isRecommended
+                ? "border-orange-500/40 bg-orange-500/10 shadow-2xs shadow-orange-500/10"
+                : "border-border/80 bg-subtle-background/40 hover:bg-subtle-background/80",
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <div
+                className={cn(
+                  "flex size-7 items-center justify-center rounded-full border transition-all",
+                  isRecommended
+                    ? "border-border/80 bg-subtle-background text-orange-500 dark:text-orange-400"
+                    : "border-border/80 bg-background text-muted-foreground",
+                )}
+              >
+                <Star
+                  size={14}
+                  className={cn(
+                    "transition-transform",
+                    isRecommended
+                      ? "fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400 scale-105"
+                      : "text-muted-foreground",
+                  )}
+                />
+              </div>
+              <div className="text-left">
+                <span className="text-[12px] sm:text-[12.5px] font-medium text-foreground block leading-tight">
+                  Admin Recommendation
+                </span>
+                <span className="text-[11px] text-muted-foreground block mt-0.5 leading-tight">
+                  Show an orange star badge on this card
+                </span>
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
+                isRecommended ? "bg-orange-500" : "bg-muted-foreground/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                  isRecommended ? "translate-x-4" : "translate-x-0",
+                )}
+              />
+            </div>
+          </div>
+        )}
 
         {error ? (
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-[12px] text-red-600 dark:text-red-400 leading-relaxed">

@@ -3,21 +3,18 @@
 import { Badge } from "@/components/ui/badge";
 import { Popover, usePopover } from "@/components/ui/popover";
 import { Tooltip } from "@/components/ui/tooltip";
-import { tags } from "@/lib/taxonomy";
+import { categoryById, tags } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
 import { cn } from "@/lib/utils";
-import type { SortMode, ViewMode } from "@/types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { SortMode } from "@/types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpDown,
   Check,
   ChevronDown,
   Code2,
-  Grid2x2,
   Layers,
-  LayoutList,
   Palette,
-  Rows3,
   Search,
   SlidersHorizontal,
   X,
@@ -36,15 +33,78 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
     ? navigation.platform === "development"
     : navigation.kind === "category" &&
       (navigation.categoryId === "development" ||
-        navigation.categoryId.startsWith("development-"));
+        Boolean(navigation.categoryId?.startsWith("development-")) ||
+        categoryById(navigation.categoryId || "")?.parentId === "development");
 
   const isDesign = isFolder
     ? navigation.platform === "design"
     : navigation.kind === "category" &&
       (navigation.categoryId === "design" ||
-        navigation.categoryId.startsWith("design-"));
+        Boolean(navigation.categoryId?.startsWith("design-")) ||
+        categoryById(navigation.categoryId || "")?.parentId === "design");
+
+  const activeKey: "all" | "development" | "design" = isDev
+    ? "development"
+    : isDesign
+      ? "design"
+      : "all";
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Record<"all" | "development" | "design", HTMLButtonElement | null>>({
+    all: null,
+    development: null,
+    design: null,
+  });
+
+  const [pillStyle, setPillStyle] = useState<{ left: number; width: number; ready: boolean }>({
+    left: 0,
+    width: 0,
+    ready: false,
+  });
+
+  const hasMountedRef = useRef(false);
+
+  const updatePill = useCallback(() => {
+    const target = tabRefs.current[activeKey];
+    if (target) {
+      setPillStyle({
+        left: target.offsetLeft,
+        width: target.offsetWidth,
+        ready: true,
+      });
+    }
+  }, [activeKey]);
+
+  useEffect(() => {
+    updatePill();
+    const timer = requestAnimationFrame(() => {
+      hasMountedRef.current = true;
+    });
+
+    const container = containerRef.current;
+    if (!container) return () => cancelAnimationFrame(timer);
+
+    const ro = new ResizeObserver(() => {
+      updatePill();
+    });
+    ro.observe(container);
+
+    return () => {
+      cancelAnimationFrame(timer);
+      ro.disconnect();
+    };
+  }, [updatePill]);
 
   const handleSelect = (platform: "all" | "development" | "design") => {
+    const target = tabRefs.current[platform];
+    if (target) {
+      setPillStyle({
+        left: target.offsetLeft,
+        width: target.offsetWidth,
+        ready: true,
+      });
+    }
+
     if (navigation.kind === "collection") {
       setNavigation({
         kind: "collection",
@@ -67,45 +127,71 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
 
   return (
     <div
+      ref={containerRef}
       className={cn(
-        "flex h-10 sm:h-8 flex-1 sm:flex-initial min-w-0 items-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] p-0.5 sm:p-0.5 shadow-2xs",
+        "relative flex h-10 sm:h-8 flex-1 sm:flex-initial min-w-0 items-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] p-0.5 sm:p-0.5 shadow-2xs",
         className,
       )}
     >
+      {/* Animated Sliding Highlight Pill */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-y-0.5 rounded-full bg-background/95 dark:bg-neutral-900/95 shadow-xs",
+          pillStyle.ready ? "opacity-100" : "opacity-0",
+        )}
+        style={{
+          left: `${pillStyle.left}px`,
+          width: `${pillStyle.width}px`,
+          transition: hasMountedRef.current
+            ? "left 0.4s cubic-bezier(0.65, 0, 0.35, 1), width 0.4s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.2s ease"
+            : "opacity 0.2s ease",
+        }}
+      />
+
       <button
+        ref={(el) => {
+          tabRefs.current.all = el;
+        }}
         type="button"
         onClick={() => handleSelect("all")}
         className={cn(
-          "flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-all duration-[120ms] cursor-pointer active:scale-95 select-none whitespace-nowrap",
+          "relative z-10 flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-colors duration-300 ease-in-out cursor-pointer active:scale-95 select-none whitespace-nowrap outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-0 bg-transparent",
           isAll
-            ? "bg-background/95 dark:bg-neutral-900/95 text-foreground font-semibold shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
-            : "text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
+            ? "text-foreground font-semibold"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Layers size={15} className="shrink-0 sm:size-[13px]" />
         <span className="shrink-0 whitespace-nowrap">All</span>
       </button>
       <button
+        ref={(el) => {
+          tabRefs.current.development = el;
+        }}
         type="button"
         onClick={() => handleSelect("development")}
         className={cn(
-          "flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-all duration-[120ms] cursor-pointer active:scale-95 select-none whitespace-nowrap",
+          "relative z-10 flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-colors duration-300 ease-in-out cursor-pointer active:scale-95 select-none whitespace-nowrap outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-0 bg-transparent",
           isDev
-            ? "bg-background/95 dark:bg-neutral-900/95 text-foreground font-semibold shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
-            : "text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
+            ? "text-foreground font-semibold"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Code2 size={15} className="shrink-0 sm:size-[13px]" />
         <span className="shrink-0 whitespace-nowrap">Dev</span>
       </button>
       <button
+        ref={(el) => {
+          tabRefs.current.design = el;
+        }}
         type="button"
         onClick={() => handleSelect("design")}
         className={cn(
-          "flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-all duration-[120ms] cursor-pointer active:scale-95 select-none whitespace-nowrap",
+          "relative z-10 flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-colors duration-300 ease-in-out cursor-pointer active:scale-95 select-none whitespace-nowrap outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-0 bg-transparent",
           isDesign
-            ? "bg-background/95 dark:bg-neutral-900/95 text-foreground font-semibold shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
-            : "text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
+            ? "text-foreground font-semibold"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Palette size={15} className="shrink-0 sm:size-[13px]" />
@@ -468,7 +554,7 @@ export function FilterPopover({
   );
 }
 
-export function SortMenuList({ className }: { className?: string } = {}) {
+function SortMenuList({ className }: { className?: string } = {}) {
   const { sort, setSort } = useVault();
   const popover = usePopover();
 
@@ -573,44 +659,5 @@ export function SortMenu({
     >
       <SortMenuList />
     </Popover>
-  );
-}
-
-export function ViewToggle({ className }: { className?: string } = {}) {
-  const { view, setView } = useVault();
-  const options: { id: ViewMode; label: string; icon: typeof LayoutList }[] = [
-    { id: "list", label: "List", icon: LayoutList },
-    { id: "grid", label: "Grid", icon: Grid2x2 },
-    { id: "compact", label: "Compact", icon: Rows3 },
-  ];
-  return (
-    <div
-      className={cn(
-        "flex h-8 items-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] p-0.5",
-        className,
-      )}
-    >
-      {options.map((option) => {
-        const Icon = option.icon;
-        const active = view === option.id;
-        return (
-          <Tooltip key={option.id} label={option.label}>
-            <button
-              type="button"
-              aria-label={option.label}
-              onClick={() => setView(option.id)}
-              className={cn(
-                "flex size-7 items-center justify-center rounded-full transition-all duration-[120ms] cursor-pointer",
-                active
-                  ? "bg-background/90 dark:bg-neutral-900/90 text-foreground font-medium shadow-xs border border-black/[0.06] dark:border-white/[0.1]"
-                  : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
-              )}
-            >
-              <Icon size={14} />
-            </button>
-          </Tooltip>
-        );
-      })}
-    </div>
   );
 }

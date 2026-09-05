@@ -13,6 +13,7 @@ type DbResourceRow = {
   icon_url: string | null;
   type: Resource["type"];
   pricing?: "Free" | "Freemium";
+  is_recommended?: boolean;
   category_id: string;
   created_by: string | null;
   created_at: string;
@@ -41,24 +42,31 @@ export async function GET() {
       return NextResponse.json({ error: error.message, resources: [] }, { status: 500 });
     }
 
-    const mapped: Resource[] = ((resData as unknown as DbResourceRow[]) || []).map((r) => ({
-      id: r.id,
-      name: r.name,
-      slug: r.slug,
-      description: r.description ?? "",
-      url: r.url,
-      domain: r.domain,
-      iconUrl: r.icon_url,
-      type: r.type,
-      pricing: r.pricing === "Free" ? "Free" : "Freemium",
-      categoryId: r.category_id,
-      createdBy: r.created_by,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-      isPublic: r.is_public,
-      tagIds: Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [],
-      saveCount: 0,
-    }));
+    const mapped: Resource[] = ((resData as unknown as DbResourceRow[]) || []).map((r) => {
+      const rawTags = Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [];
+      const hasRecommendedTag = rawTags.includes("admin-recommended");
+      const cleanTags = rawTags.filter((t) => t !== "admin-recommended");
+
+      return {
+        id: r.id,
+        name: r.name,
+        slug: r.slug,
+        description: r.description ?? "",
+        url: r.url,
+        domain: r.domain,
+        iconUrl: r.icon_url,
+        type: r.type,
+        pricing: r.pricing === "Free" ? "Free" : "Freemium",
+        isRecommended: Boolean(r.is_recommended) || hasRecommendedTag,
+        categoryId: r.category_id || "",
+        createdBy: r.created_by,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        isPublic: r.is_public,
+        tagIds: cleanTags,
+        saveCount: 0,
+      };
+    });
 
     return NextResponse.json({ resources: mapped });
   } catch (err: unknown) {
@@ -123,7 +131,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, name, description, url, categoryId, type, tags, collectionId, createdBy, pricing } = body;
+    const { id, name, description, url, categoryId, type, tags, collectionId, createdBy, pricing, isRecommended } = body;
 
     if (!name || !url || !categoryId || !type) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
@@ -173,11 +181,19 @@ export async function POST(request: Request) {
         updated_at: now,
       };
       if (pricing) updateData.pricing = pricing;
+      if (isRecommended !== undefined) updateData.is_recommended = Boolean(isRecommended);
 
       let { error: updateErr } = await supabase
         .from("resources")
         .update(updateData)
         .eq("id", targetId);
+
+      // If is_recommended column doesn't exist yet, retry without it
+      if (updateErr && (updateErr.message.includes("is_recommended") || updateErr.code === "42703")) {
+        delete updateData.is_recommended;
+        const retry = await supabase.from("resources").update(updateData).eq("id", targetId);
+        updateErr = retry.error;
+      }
 
       // If pricing column doesn't exist yet, retry without pricing
       if (updateErr && (updateErr.message.includes("pricing") || updateErr.code === "42703")) {
@@ -192,12 +208,23 @@ export async function POST(request: Request) {
       }
 
       if (Array.isArray(tags)) {
-        await ensureTags(supabase, tags);
+        const finalTagsToSync = tags.filter((t: string) => t !== "admin-recommended");
+        if (isRecommended) {
+          finalTagsToSync.push("admin-recommended");
+        }
+        await ensureTags(supabase, finalTagsToSync);
         await supabase.from("resource_tags").delete().eq("resource_id", targetId);
-        if (tags.length > 0) {
+        if (finalTagsToSync.length > 0) {
           await supabase.from("resource_tags").insert(
-            tags.map((tid: string) => ({ resource_id: targetId, tag_id: tid })),
+            finalTagsToSync.map((tid: string) => ({ resource_id: targetId, tag_id: tid })),
           );
+        }
+      } else if (isRecommended !== undefined) {
+        if (isRecommended) {
+          await ensureTags(supabase, ["admin-recommended"]);
+          await supabase.from("resource_tags").upsert({ resource_id: targetId, tag_id: "admin-recommended" });
+        } else {
+          await supabase.from("resource_tags").delete().eq("resource_id", targetId).eq("tag_id", "admin-recommended");
         }
       }
 
@@ -216,7 +243,8 @@ export async function POST(request: Request) {
         updatedAt: now,
         isPublic: true,
         pricing: pricing === "Free" ? "Free" : "Freemium",
-        tagIds: tags || [],
+        isRecommended: Boolean(isRecommended),
+        tagIds: Array.isArray(tags) ? tags.filter((t: string) => t !== "admin-recommended") : [],
         saveCount: 0,
       };
 
@@ -239,8 +267,18 @@ export async function POST(request: Request) {
       created_at: now,
       updated_at: now,
     };
+    if (isRecommended !== undefined) {
+      insertData.is_recommended = Boolean(isRecommended);
+    }
 
     let { error: insErr } = await supabase.from("resources").insert(insertData);
+
+    // If is_recommended column doesn't exist yet, retry without is_recommended
+    if (insErr && (insErr.message.includes("is_recommended") || insErr.code === "42703")) {
+      delete insertData.is_recommended;
+      const retry = await supabase.from("resources").insert(insertData);
+      insErr = retry.error;
+    }
 
     // If pricing column doesn't exist yet, retry without pricing
     if (insErr && (insErr.message.includes("pricing") || insErr.code === "42703")) {
@@ -255,9 +293,13 @@ export async function POST(request: Request) {
     }
 
     // Insert Tags
-    if (Array.isArray(tags) && tags.length > 0) {
-      await ensureTags(supabase, tags);
-      const tagRows = tags.map((tid: string) => ({
+    const tagsToInsert = Array.isArray(tags) ? tags.filter((t: string) => t !== "admin-recommended") : [];
+    if (isRecommended) {
+      tagsToInsert.push("admin-recommended");
+    }
+    if (tagsToInsert.length > 0) {
+      await ensureTags(supabase, tagsToInsert);
+      const tagRows = tagsToInsert.map((tid: string) => ({
         resource_id: resourceId,
         tag_id: tid,
       }));
@@ -293,7 +335,8 @@ export async function POST(request: Request) {
       updatedAt: now,
       isPublic: true,
       pricing: pricing === "Free" ? "Free" : "Freemium",
-      tagIds: tags || [],
+      isRecommended: Boolean(isRecommended),
+      tagIds: Array.isArray(tags) ? tags.filter((t: string) => t !== "admin-recommended") : [],
       saveCount: 0,
     };
 
@@ -340,15 +383,22 @@ export async function PATCH(request: Request) {
       updatePayload.category_id = patch.categoryId;
     }
     if (patch.isPublic !== undefined) updatePayload.is_public = patch.isPublic;
+    if (patch.isRecommended !== undefined) updatePayload.is_recommended = patch.isRecommended;
 
     let { error: updateErr } = await supabase
       .from("resources")
       .update(updatePayload)
       .eq("id", id);
 
-    // If pricing column doesn't exist yet, retry without pricing
-    if (updateErr && (updateErr.message.includes("pricing") || updateErr.code === "42703")) {
+    // If pricing or is_recommended column doesn't exist yet, retry without them
+    if (
+      updateErr &&
+      (updateErr.message.includes("pricing") ||
+        updateErr.message.includes("is_recommended") ||
+        updateErr.code === "42703")
+    ) {
       delete updatePayload.pricing;
+      delete updatePayload.is_recommended;
       const retry = await supabase.from("resources").update(updatePayload).eq("id", id);
       updateErr = retry.error;
     }
@@ -358,14 +408,43 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ ok: false, error: updateErr.message }, { status: 400 });
     }
 
-    // Update tags if provided
+    // Update tags if provided or recommendation tag
     if (Array.isArray(patch.tagIds)) {
-      await ensureTags(supabase, patch.tagIds);
+      const { data: existingRecTag } = await supabase
+        .from("resource_tags")
+        .select("tag_id")
+        .eq("resource_id", id)
+        .eq("tag_id", "admin-recommended")
+        .maybeSingle();
+
+      const shouldBeRecommended =
+        patch.isRecommended !== undefined ? Boolean(patch.isRecommended) : Boolean(existingRecTag);
+
+      const finalTagsToSync = patch.tagIds.filter((t: string) => t !== "admin-recommended");
+      if (shouldBeRecommended) {
+        finalTagsToSync.push("admin-recommended");
+      }
+
+      await ensureTags(supabase, finalTagsToSync);
       await supabase.from("resource_tags").delete().eq("resource_id", id);
-      if (patch.tagIds.length > 0) {
+      if (finalTagsToSync.length > 0) {
         await supabase.from("resource_tags").insert(
-          patch.tagIds.map((tid: string) => ({ resource_id: id, tag_id: tid })),
+          finalTagsToSync.map((tid: string) => ({ resource_id: id, tag_id: tid })),
         );
+      }
+    } else if (patch.isRecommended !== undefined) {
+      if (patch.isRecommended) {
+        await ensureTags(supabase, ["admin-recommended"]);
+        await supabase.from("resource_tags").upsert({
+          resource_id: id,
+          tag_id: "admin-recommended",
+        });
+      } else {
+        await supabase
+          .from("resource_tags")
+          .delete()
+          .eq("resource_id", id)
+          .eq("tag_id", "admin-recommended");
       }
     }
 

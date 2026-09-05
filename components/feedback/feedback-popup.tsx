@@ -102,33 +102,63 @@ export function FeedbackPopup({ open, onClose }: FeedbackPopupProps) {
     }
   };
 
-  if (!open) return null;
+  const [mounted, setMounted] = useState(open);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setVisible(true);
+        });
+      });
+      return () => cancelAnimationFrame(raf);
+    } else {
+      setVisible(false);
+      const timer = setTimeout(() => {
+        setMounted(false);
+      }, 320);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
+  if (!mounted) return null;
 
   return (
-    <>
-      {/* Subtle Backdrop on mobile */}
+    <div className="fixed inset-0 z-50 overflow-hidden flex items-end justify-center">
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] md:hidden transition-opacity"
+        className={cn(
+          "absolute inset-0 bg-black/40 dark:bg-black/65 backdrop-blur-[2px] transition-opacity duration-300 ease-out",
+          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+        )}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Floating Popup sliding from right */}
+      {/* Bottom Sheet Popup */}
       <div
         ref={popupRef}
         role="dialog"
         aria-modal="true"
         aria-label="Suggest a tool or feature"
+        style={{
+          transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
         className={cn(
-          "fixed right-3 sm:right-6 top-16 sm:top-[4.25rem] z-50",
-          "w-[340px] sm:w-[380px] max-w-[calc(100vw-1.5rem)]",
-          "rounded-2xl border border-border/80 bg-background/95 backdrop-blur-2xl p-4 sm:p-5 shadow-2xl",
-          "animate-in slide-in-from-right-8 fade-in-0 duration-200 ease-out origin-top-right",
-          "flex flex-col gap-3.5"
+          "relative z-10 flex w-full max-w-md sm:max-w-lg flex-col gap-3.5",
+          "rounded-t-[28px] sm:rounded-t-[32px] border-t sm:border-x border-border/80 dark:border-white/12",
+          "bg-background/95 dark:bg-[#121318]/95 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl",
+          "will-change-transform transition-all duration-[320ms]",
+          "max-h-[85dvh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]",
+          visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-90",
         )}
       >
+        {/* Pull Handle */}
+        <div className="mx-auto -mt-1 mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 shrink-0" />
         {/* Header with Title & Close button */}
-        <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="flex items-center justify-between border-b border-border dark:border-white/10 pb-3">
           <div className="flex items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Sparkles size={15} />
@@ -223,6 +253,6 @@ export function FeedbackPopup({ open, onClose }: FeedbackPopupProps) {
           </form>
         )}
       </div>
-    </>
+    </div>
   );
 }

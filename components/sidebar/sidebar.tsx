@@ -2,7 +2,7 @@
 
 import { useVault } from "@/lib/vault/store";
 import { cn, faviconUrl } from "@/lib/utils";
-import { Bookmark, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -371,14 +371,12 @@ export function Sidebar() {
     createCollection,
     sidebarOpen,
     setSidebarOpen,
-    savedIds,
     collectionResourceIds,
     resources,
     deleteCollection,
     renameCollection,
     theme,
     isAdmin,
-    setAddOpen,
     setFolderAddOpen,
   } = useVault();
   const isDark = theme === "dark";

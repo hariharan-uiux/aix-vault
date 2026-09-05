@@ -11,7 +11,7 @@ import { getResourcePricing } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils";
 import { useVault } from "@/lib/vault/store";
 import type { Resource, ViewMode } from "@/types";
-import { Pencil, Plus, SquareCheck, Trash2, X } from "lucide-react";
+import { Pencil, Plus, SquareCheck, Star, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function ResourceList({
@@ -28,9 +28,9 @@ export function ResourceList({
   onSelect: (id: string) => void;
 }) {
   const {
-    savedIds,
     deleteResource,
     updateResource,
+    toggleRecommendResource,
     isAdmin,
     selectedResourceIds,
     toggleSelectResource,
@@ -49,6 +49,7 @@ export function ResourceList({
   const [editName, setEditName] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editPricing, setEditPricing] = useState<"Free" | "Freemium">("Freemium");
+  const [editRecommended, setEditRecommended] = useState(false);
 
   useEffect(() => {
     if (!contextMenu && !editingResource) return;
@@ -77,10 +78,12 @@ export function ResourceList({
     setEditName(resource.name);
     setEditUrl(resource.url);
     setEditPricing(getResourcePricing(resource));
+    setEditRecommended(Boolean(resource.isRecommended));
     setContextMenu(null);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!isAdmin || !editingResource) return;
     const trimmedName = editName.trim();
     const trimmedUrl = editUrl.trim();
@@ -100,6 +103,7 @@ export function ResourceList({
       url: trimmedUrl || editingResource.url,
       domain,
       pricing: editPricing,
+      isRecommended: editRecommended,
     });
     setEditingResource(null);
   };
@@ -108,8 +112,8 @@ export function ResourceList({
     return (
       <div className="w-full">
         {view === "grid" && (
-          <div className="w-full border-y border-border -mt-px bg-background">
-            <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 xl:border-l xl:border-r border-border">
+          <div className="w-full border-y border-border dark:border-white/[0.08] -mt-px bg-transparent">
+            <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08]">
               {Array.from({ length: 18 }).map((_, index) => (
                 <div
                   key={index}
@@ -205,9 +209,6 @@ export function ResourceList({
   const activeContextMenuResource = contextMenu
     ? resources.find((r) => r.id === contextMenu.resource.id) ?? contextMenu.resource
     : null;
-  const isSaved = activeContextMenuResource
-    ? savedIds.includes(activeContextMenuResource.id)
-    : false;
   const activePricing = activeContextMenuResource
     ? getResourcePricing(activeContextMenuResource)
     : "Freemium";
@@ -215,8 +216,8 @@ export function ResourceList({
   return (
     <>
       {view === "grid" && (
-        <div className="w-full border-y border-border -mt-px bg-background">
-          <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 xl:border-l xl:border-r border-border">
+        <div className="w-full border-y border-border dark:border-white/[0.08] -mt-px bg-transparent">
+          <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08]">
             {resources.map((resource) => (
               <ResourceGridCard
                 key={resource.id}
@@ -337,6 +338,32 @@ export function ResourceList({
               </button>
             )}
 
+            {/* Recommend Tool (Admin Only) */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  toggleRecommendResource(activeContextMenuResource.id, e);
+                  setContextMenu(null);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-foreground hover:bg-subtle-background transition-colors cursor-pointer"
+              >
+                <Star
+                  size={13}
+                  className={cn(
+                    activeContextMenuResource.isRecommended
+                      ? "fill-orange-500 text-orange-500"
+                      : "text-muted-foreground",
+                  )}
+                />
+                <span>
+                  {activeContextMenuResource.isRecommended
+                    ? "Remove Recommendation"
+                    : "Recommend Resource"}
+                </span>
+              </button>
+            )}
+
             {/* Edit Name & URL (Admin Only) */}
             {isAdmin && (
               <button
@@ -447,6 +474,60 @@ export function ResourceList({
                       {p}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Admin Recommendation Toggle */}
+              <div
+                onClick={() => setEditRecommended((prev) => !prev)}
+                className={cn(
+                  "flex items-center justify-between rounded-xl border p-2.5 transition-all cursor-pointer select-none",
+                  editRecommended
+                    ? "border-orange-500/40 bg-orange-500/10 shadow-2xs shadow-orange-500/10"
+                    : "border-border/80 bg-subtle-background/40 hover:bg-subtle-background/80",
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={cn(
+                      "flex size-7 items-center justify-center rounded-full border transition-all",
+                      editRecommended
+                        ? "border-border/80 bg-subtle-background text-orange-500 dark:text-orange-400"
+                        : "border-border/80 bg-background text-muted-foreground",
+                    )}
+                  >
+                    <Star
+                      size={14}
+                      className={cn(
+                        "transition-transform",
+                        editRecommended
+                          ? "fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400 scale-105"
+                          : "text-muted-foreground",
+                      )}
+                    />
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[12px] font-medium text-foreground block leading-tight">
+                      Admin Recommendation
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block mt-0.5 leading-tight">
+                      Show an orange star badge on cards
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className={cn(
+                    "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
+                    editRecommended ? "bg-orange-500" : "bg-muted-foreground/30",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                      editRecommended ? "translate-x-4" : "translate-x-0",
+                    )}
+                  />
                 </div>
               </div>
 

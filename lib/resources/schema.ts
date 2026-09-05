@@ -21,6 +21,7 @@ export const resourceInputSchema = z.object({
   tags: z.array(z.string()).default([]),
   collectionId: z.string().optional(),
   pricing: z.enum(["Free", "Freemium"]).optional(),
+  isRecommended: z.boolean().optional(),
 });
 
 export type ResourceInput = z.infer<typeof resourceInputSchema>;

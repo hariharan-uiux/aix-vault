@@ -5,7 +5,7 @@ import { categoryById, getResourcePricing, typeBySlug } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils";
 import { useVault } from "@/lib/vault/store";
 import type { Resource } from "@/types";
-import { ArrowUpRight, Check } from "lucide-react";
+import { ArrowUpRight, Check, Star } from "lucide-react";
 import { useRef } from "react";
 
 function useLongPress({
@@ -49,7 +49,7 @@ function useLongPress({
   return { onTouchStart, onTouchMove, onTouchEnd };
 }
 
-export function PricingBadge({
+function PricingBadge({
   pricing,
   className,
 }: {
@@ -79,7 +79,7 @@ export function ResourceRow({
   onSelect: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, resource: Resource) => void;
 }) {
-  const { isAdmin, isSelectMode, selectedResourceIds, toggleSelectResource } = useVault();
+  const { isAdmin, isSelectMode, selectedResourceIds, toggleSelectResource, toggleRecommendResource } = useVault();
   const pricing = getResourcePricing(resource);
   const typeObj = typeBySlug(resource.type);
   const isChecked = selectedResourceIds.includes(resource.id);
@@ -156,8 +156,34 @@ export function ResourceRow({
         </div>
       </button>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0">
         <PricingBadge pricing={pricing} />
+
+        {/* Admin Recommendation Star (Only shown if recommended) */}
+        {resource.isRecommended && (
+          <button
+            type="button"
+            onClick={(e) => {
+              if (isAdmin) {
+                toggleRecommendResource(resource.id, e);
+              } else {
+                e.stopPropagation();
+              }
+            }}
+            title={isAdmin ? "Admin recommended (Click to remove)" : "Admin recommended"}
+            aria-label="Admin recommended"
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background text-orange-500 dark:text-orange-400 transition-all duration-150 outline-none focus:outline-none",
+              isAdmin ? "cursor-pointer active:scale-90 hover:border-foreground/30 hover:bg-subtle-background/80" : "cursor-default",
+            )}
+          >
+            <Star
+              size={13}
+              className="fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400 scale-105"
+            />
+          </button>
+        )}
+
         <a
           href={resource.url}
           target="_blank"
@@ -185,7 +211,7 @@ export function ResourceGridCard({
   onSelect: (id: string) => void;
   onContextMenu?: (e: React.MouseEvent, resource: Resource) => void;
 }) {
-  const { isAdmin, isSelectMode, selectedResourceIds, toggleSelectResource } = useVault();
+  const { isAdmin, isSelectMode, selectedResourceIds, toggleSelectResource, toggleRecommendResource } = useVault();
   const pricing = getResourcePricing(resource);
   const typeObj = typeBySlug(resource.type);
   const category = categoryById(resource.categoryId);
@@ -225,9 +251,9 @@ export function ResourceGridCard({
       onContextMenu={(e) => onContextMenu?.(e, resource)}
       {...longPressProps}
       className={cn(
-        "group relative flex min-h-[108px] sm:min-h-[118px] w-full cursor-pointer flex-col justify-between border-b border-r border-border p-3 sm:p-3.5 text-left transition-colors duration-[140ms] hover:bg-subtle-background/90 focus:outline-none select-none",
-        "xl:before:pointer-events-none xl:before:absolute xl:before:right-full xl:before:w-[100vw] xl:before:bottom-0 xl:before:h-px xl:before:bg-border",
-        "xl:after:pointer-events-none xl:after:absolute xl:after:left-full xl:after:w-[100vw] xl:after:bottom-0 xl:after:h-px xl:after:bg-border",
+        "group relative flex min-h-[108px] sm:min-h-[118px] w-full cursor-pointer flex-col justify-between border-b border-r border-border dark:border-white/[0.08] p-3 sm:p-3.5 text-left transition-colors duration-[140ms] hover:bg-subtle-background/90 focus:outline-none select-none",
+        "xl:before:pointer-events-none xl:before:absolute xl:before:right-full xl:before:w-[100vw] xl:before:bottom-0 xl:before:h-px xl:before:bg-border dark:xl:before:bg-white/[0.08]",
+        "xl:after:pointer-events-none xl:after:absolute xl:after:left-full xl:after:w-[100vw] xl:after:bottom-0 xl:after:h-px xl:after:bg-border dark:xl:after:bg-white/[0.08]",
         isChecked && "bg-orange-500/[0.06] ring-2 ring-inset ring-orange-500/70 z-10",
         selected && !isChecked && "bg-subtle-background ring-1 ring-inset ring-orange-500/60 dark:ring-orange-400/60 z-10",
       )}
@@ -276,22 +302,49 @@ export function ResourceGridCard({
         </div>
       </div>
 
-      {/* Bottom: Pricing badge on left + View Icon Button on right */}
+      {/* Bottom: Pricing badge on left + Star & View Icon Button on right */}
       <div className="flex w-full items-center justify-between gap-2 pt-2">
         <PricingBadge pricing={pricing} />
 
-        {/* View Icon-only Button */}
-        <a
-          href={resource.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={`Visit ${resource.name}`}
-          aria-label={`Visit ${resource.name}`}
-          onClick={(e) => e.stopPropagation()}
-          className="flex size-6.5 sm:size-7 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background text-muted-foreground transition-all hover:border-foreground/30 hover:bg-foreground hover:text-background cursor-pointer"
-        >
-          <ArrowUpRight size={12} />
-        </a>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Admin Recommendation Star (Only shown if recommended) */}
+          {resource.isRecommended && (
+            <button
+              type="button"
+              onClick={(e) => {
+                if (isAdmin) {
+                  toggleRecommendResource(resource.id, e);
+                } else {
+                  e.stopPropagation();
+                }
+              }}
+              title={isAdmin ? "Admin recommended (Click to remove)" : "Admin recommended"}
+              aria-label="Admin recommended"
+              className={cn(
+                "flex size-6.5 sm:size-7 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background text-orange-500 dark:text-orange-400 transition-all duration-150 outline-none focus:outline-none",
+                isAdmin ? "cursor-pointer active:scale-90 hover:border-foreground/30 hover:bg-subtle-background/80" : "cursor-default",
+              )}
+            >
+              <Star
+                size={12}
+                className="fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400 scale-105"
+              />
+            </button>
+          )}
+
+          {/* View Icon-only Button */}
+          <a
+            href={resource.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Visit ${resource.name}`}
+            aria-label={`Visit ${resource.name}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex size-6.5 sm:size-7 shrink-0 items-center justify-center rounded-full border border-border bg-subtle-background text-muted-foreground transition-all hover:border-foreground/30 hover:bg-foreground hover:text-background cursor-pointer"
+          >
+            <ArrowUpRight size={12} />
+          </a>
+        </div>
       </div>
     </div>
   );
@@ -368,6 +421,12 @@ export function ResourceCompactItem({
 
       <ResourceIcon resource={resource} size={24} />
       <span className="font-medium text-foreground">{resource.name}</span>
+      {resource.isRecommended && (
+        <Star
+          size={12}
+          className="fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400 shrink-0"
+        />
+      )}
     </div>
   );
 }
