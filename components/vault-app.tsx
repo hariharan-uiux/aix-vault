@@ -4,15 +4,15 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { FloatingDock } from "@/components/dock/floating-dock";
 import { ResourceDrawer } from "@/components/resources/resource-drawer";
 import { ResourceForm } from "@/components/resources/resource-form";
+import { FolderAddToolsDialog } from "@/components/collections/folder-add-tools-dialog";
 import { ResourceList } from "@/components/resources/resource-list";
 import { SearchCommand } from "@/components/search/search-command";
-import { Button } from "@/components/ui/button";
 import { Toast } from "@/components/ui/toast";
 import { categoryById } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils";
 import { useVault } from "@/lib/vault/store";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 function MainPane() {
@@ -25,6 +25,8 @@ function MainPane() {
     navigation,
     collections,
     isLoading,
+    isAdmin,
+    setFolderAddOpen,
   } = useVault();
 
   let title = "All Resources";
@@ -105,8 +107,25 @@ function MainPane() {
         )}
       >
         {navigation.kind === "collection" ? (
-          <div className="px-3 pt-4 pb-2 sm:px-4 sm:pt-6 md:px-6 xl:px-0">
-            <h1 className="text-[20px] font-medium tracking-tight sm:text-[24px]">{title}</h1>
+          <div className="px-3 pt-4 pb-2 sm:px-4 sm:pt-6 md:px-6 xl:px-0 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h1 className="text-[20px] font-semibold tracking-tight sm:text-[24px] truncate">{title}</h1>
+              <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-mono border border-black/10 dark:border-white/10 bg-subtle-background text-muted-foreground">
+                {result.total} {result.total === 1 ? "tool" : "tools"}
+              </span>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setFolderAddOpen(true)}
+                className="flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/12 bg-black/[0.04] dark:bg-white/[0.06] text-foreground hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all duration-150 cursor-pointer shadow-sm active:scale-95 select-none"
+                title={`Add tools to ${title}`}
+                aria-label={`Add tools to ${title}`}
+              >
+                <Plus size={16} strokeWidth={2.4} />
+              </button>
+            )}
           </div>
         ) : null}
 
@@ -154,6 +173,7 @@ export function VaultApp() {
       <FloatingDock />
       <ResourceDrawer />
       <ResourceForm />
+      <FolderAddToolsDialog />
       <SearchCommand />
       {toast ? <Toast message={toast} /> : null}
     </AppShell>

@@ -3,7 +3,7 @@
 -- ==============================================================================
 -- Run this script in your Supabase SQL Editor (Dashboard -> SQL Editor -> New query).
 -- This script is fully idempotent (safe to run multiple times).
--- It ensures all data entities (folders, categories, tool types, pricing, saves)
+-- It ensures all data entities (resources, folders, categories, tool types, pricing, saves, feedback)
 -- are fully backed by Supabase and synchronized in real-time across all clients.
 -- ==============================================================================
 
@@ -74,10 +74,91 @@ insert into public.resource_types (id, name, slug) values
   ('other', 'Other', 'other')
 on conflict (id) do nothing;
 
--- 4. REALTIME PUBLICATION: ADD MISSING TABLES
+-- 4. CREATE FEEDBACK TABLE (Viewer Suggestions & Bug Reports)
+create table if not exists public.feedback (
+  id uuid primary key default gen_random_uuid(),
+  message text not null,
+  status text not null default 'new' check (status in ('new', 'read', 'archived', 'in_progress', 'completed')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.feedback enable row level security;
+
+drop policy if exists "Allow public feedback inserts" on public.feedback;
+create policy "Allow public feedback inserts"
+  on public.feedback
+  for insert
+  to public
+  with check (true);
+
+drop policy if exists "Admins can view feedback" on public.feedback;
+create policy "Admins can view feedback"
+  on public.feedback
+  for select
+  to authenticated
+  using (public.is_admin());
+
+drop policy if exists "Admins can update feedback" on public.feedback;
+create policy "Admins can update feedback"
+  on public.feedback
+  for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "Admins can delete feedback" on public.feedback;
+create policy "Admins can delete feedback"
+  on public.feedback
+  for delete
+  to authenticated
+  using (public.is_admin());
+
+-- 5. ENSURE PUBLIC READ ACCESS FOR COLLECTIONS (Public directory folders)
+drop policy if exists "read collections" on public.collections;
+create policy "read collections" on public.collections
+  for select using (true);
+
+drop policy if exists "read collection resources" on public.collection_resources;
+create policy "read collection resources" on public.collection_resources
+  for select using (true);
+
+-- 6. POLICIES ON SAVED_RESOURCES
+drop policy if exists "users read own saved" on public.saved_resources;
+create policy "users read own saved" on public.saved_resources
+  for select using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "users write own saved" on public.saved_resources;
+create policy "users write own saved" on public.saved_resources
+  for all using (auth.uid() = user_id or public.is_admin());
+
+-- 7. REALTIME PUBLICATION: ENSURE ALL SYNC TABLES ARE PUBLISHED
 do $$
 begin
-  -- Add collection_resources
+  -- resources
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'resources'
+  ) then
+    alter publication supabase_realtime add table public.resources;
+  end if;
+
+  -- categories
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'categories'
+  ) then
+    alter publication supabase_realtime add table public.categories;
+  end if;
+
+  -- collections
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'collections'
+  ) then
+    alter publication supabase_realtime add table public.collections;
+  end if;
+
+  -- collection_resources
   if not exists (
     select 1 from pg_publication_tables
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'collection_resources'
@@ -85,7 +166,7 @@ begin
     alter publication supabase_realtime add table public.collection_resources;
   end if;
 
-  -- Add resource_types
+  -- resource_types
   if not exists (
     select 1 from pg_publication_tables
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'resource_types'
@@ -93,7 +174,7 @@ begin
     alter publication supabase_realtime add table public.resource_types;
   end if;
 
-  -- Add saved_resources
+  -- saved_resources
   if not exists (
     select 1 from pg_publication_tables
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'saved_resources'
@@ -102,17 +183,10 @@ begin
   end if;
 end $$;
 
--- 5. SET REPLICA IDENTITY FULL (Ensures Realtime broadcasts complete row data)
+-- 8. SET REPLICA IDENTITY FULL (Ensures Realtime broadcasts complete row data)
+alter table public.resources replica identity full;
+alter table public.categories replica identity full;
+alter table public.collections replica identity full;
 alter table public.collection_resources replica identity full;
 alter table public.resource_types replica identity full;
 alter table public.saved_resources replica identity full;
-
--- 6. VERIFY POLICIES ON SAVED_RESOURCES
--- Ensure authenticated users can read and manage their saved items
-drop policy if exists "users read own saved" on public.saved_resources;
-create policy "users read own saved" on public.saved_resources
-  for select using (auth.uid() = user_id or public.is_admin());
-
-drop policy if exists "users write own saved" on public.saved_resources;
-create policy "users write own saved" on public.saved_resources
-  for all using (auth.uid() = user_id or public.is_admin());

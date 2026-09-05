@@ -11,7 +11,7 @@ import { getResourcePricing } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils";
 import { useVault } from "@/lib/vault/store";
 import type { Resource, ViewMode } from "@/types";
-import { Bookmark, Pencil, SquareCheck, Trash2, X } from "lucide-react";
+import { Pencil, Plus, SquareCheck, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function ResourceList({
@@ -24,17 +24,19 @@ export function ResourceList({
   resources: Resource[];
   view: ViewMode;
   selectedId: string | null;
-  loading: boolean;
+  loading?: boolean;
   onSelect: (id: string) => void;
 }) {
   const {
     savedIds,
-    saveResource,
     deleteResource,
     updateResource,
     isAdmin,
     selectedResourceIds,
     toggleSelectResource,
+    setAddOpen,
+    setFolderAddOpen,
+    navigation,
   } = useVault();
 
   const [contextMenu, setContextMenu] = useState<{
@@ -175,11 +177,27 @@ export function ResourceList({
 
   if (resources.length === 0) {
     return (
-      <div className="px-4 py-16 text-center sm:px-6 sm:py-20">
+      <div className="px-4 py-16 text-center sm:px-6 sm:py-20 flex flex-col items-center">
         <p className="text-[14px] font-medium sm:text-[15px]">No resources found.</p>
         <p className="mt-1 text-[12px] text-muted-foreground sm:text-[13px]">
-          {isAdmin ? 'Use "+ Add Resource" above to add your first resource.' : "No resources added yet."}
+          {isAdmin ? "Get started by adding tools to this collection." : "No resources added yet."}
         </p>
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => {
+              if (navigation.kind === "collection") {
+                setFolderAddOpen(true);
+              } else {
+                setAddOpen(true);
+              }
+            }}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/12 bg-foreground text-background hover:bg-orange-500 hover:text-white px-4 py-2 text-[13px] font-medium transition-all duration-150 cursor-pointer shadow-xs active:scale-95 select-none"
+          >
+            <Plus size={15} strokeWidth={2.2} />
+            <span>{navigation.kind === "collection" ? "Add Existing Tools" : "Add Tool"}</span>
+          </button>
+        )}
       </div>
     );
   }

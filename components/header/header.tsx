@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useVault } from "@/lib/vault/store";
 import { cn } from "@/lib/utils";
 import { AdminLoginModal } from "@/components/auth/admin-login-modal";
-import { Coffee, Contrast, Loader2, Moon, Palette, Search, Shield, Sun } from "lucide-react";
+import { FeedbackPopup } from "@/components/feedback/feedback-popup";
+import { Coffee, Contrast, Loader2, MessageSquarePlus, Moon, Palette, Search, Shield, Sun } from "lucide-react";
 
 function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme, iconMode, setIconMode } = useVault();
@@ -119,11 +121,13 @@ export function Header() {
     isLoading,
   } = useVault();
 
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+
   return (
     <header
       className={cn(
         "sticky top-0 z-30 w-full border-b border-border apple-blur transition-all",
-        authModalOpen && "z-50",
+        (authModalOpen || feedbackOpen) && "z-50",
       )}
     >
       <div className="mx-auto h-12 w-full max-w-[1800px] xl:px-12 2xl:px-16">
@@ -273,6 +277,28 @@ export function Header() {
             </a>
           </Tooltip>
         )}
+
+        {/* Suggest a Tool or Feature (Notes / Feedback) */}
+        {role !== "admin" && (
+          <Tooltip side="bottom" label="Suggest a tool or feature">
+            <button
+              type="button"
+              data-feedback-trigger="true"
+              onClick={() => setFeedbackOpen((prev) => !prev)}
+              className={cn(
+                "flex size-7.5 sm:size-8 items-center justify-center rounded-full border border-border/80 bg-subtle-background/60 text-muted-foreground transition-all duration-200 hover:bg-subtle-background hover:text-foreground cursor-pointer",
+                feedbackOpen && "ring-2 ring-emerald-500/30 border-emerald-500/40 text-foreground bg-subtle-background",
+              )}
+              aria-label="Suggest a tool or feature"
+              aria-expanded={feedbackOpen}
+              aria-haspopup="dialog"
+            >
+              <MessageSquarePlus size={14} />
+            </button>
+          </Tooltip>
+        )}
+
+        <FeedbackPopup open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
         {/* Profile / Role Badge & Popup (only visible in Admin mode) */}
         {role === "admin" && (

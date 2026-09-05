@@ -64,16 +64,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Missing collection details" }, { status: 400 });
     }
 
-    const { error } = await supabase.from("collections").upsert({
+    // Check if collection already exists to avoid overwriting created_by, description, or icon
+    const { data: existing } = await supabase
+      .from("collections")
+      .select("id")
+      .eq("id", collection.id)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      const updateData: Record<string, unknown> = {
+        name: collection.name,
+        slug: collection.slug || collection.id,
+        updated_at: new Date().toISOString(),
+      };
+      if (collection.description !== undefined) updateData.description = collection.description;
+      if (collection.icon !== undefined) updateData.icon = collection.icon;
+      if (collection.createdBy !== undefined) updateData.created_by = collection.createdBy;
+
+      const { error } = await supabase.from("collections").update(updateData).eq("id", collection.id);
+      if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+      return NextResponse.json({ ok: true, updated: true });
+    }
+
+    const { error } = await supabase.from("collections").insert({
       id: collection.id,
       name: collection.name,
       slug: collection.slug || collection.id,
       description: collection.description || "",
+      icon: collection.icon || null,
       created_by: collection.createdBy || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     });
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, created: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

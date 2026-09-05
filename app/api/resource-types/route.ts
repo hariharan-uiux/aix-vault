@@ -61,6 +61,10 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  return POST(request);
+}
+
 export async function DELETE(request: Request) {
   const supabase = getSupabaseAdminClient() || getSupabaseClient();
   if (!supabase) {
@@ -75,7 +79,10 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
     }
 
-    const { error } = await supabase.from("resource_types").delete().eq("id", id);
+    const { error } = await supabase
+      .from("resource_types")
+      .delete()
+      .or(`id.eq.${id},slug.eq.${id}`);
     if (error) {
       console.error("[api/resource-types DELETE] Error:", error);
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });

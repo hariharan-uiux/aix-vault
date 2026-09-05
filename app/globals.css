@@ -389,3 +389,14 @@ textarea[class*="bg-subtle-background"]:autofill:not(:focus) {
   box-shadow: 0 0 0 1000px var(--subtle-background) inset !important;
 }
 
+/* Remove browser default border and focus outline when editing text across all views */
+[contenteditable],
+[contenteditable]:focus,
+[contenteditable]:focus-visible,
+[contenteditable="true"],
+[contenteditable="true"]:focus,
+[contenteditable="true"]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}

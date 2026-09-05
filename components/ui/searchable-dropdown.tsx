@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Check, ChevronDown, Plus, Search, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface DropdownOption {
@@ -26,6 +26,7 @@ interface SearchableDropdownProps {
   onAdd?: (name: string) => void;
   addLabel?: string;
   onDelete?: (value: string) => void;
+  onEdit?: (value: string, newName: string) => void;
 }
 
 export function SearchableDropdown({
@@ -44,6 +45,7 @@ export function SearchableDropdown({
   onAdd,
   addLabel,
   onDelete,
+  onEdit,
 }: SearchableDropdownProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -51,10 +53,14 @@ export function SearchableDropdown({
   const [isAdding, setIsAdding] = useState(false);
   const [newOptionName, setNewOptionName] = useState("");
   const [confirmDeleteValue, setConfirmDeleteValue] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [isManageMode, setIsManageMode] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const newInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = useMemo(
@@ -98,11 +104,26 @@ export function SearchableDropdown({
       setIsAdding(false);
       setNewOptionName("");
       setConfirmDeleteValue(null);
+      setEditingValue(null);
+      setEditingName("");
+      setIsManageMode(false);
       requestAnimationFrame(() => {
         inputRef.current?.focus();
       });
+    } else {
+      setEditingValue(null);
+      setEditingName("");
+      setIsManageMode(false);
     }
   }, [open]);
+
+  // Focus inline edit input when starting to edit
+  useEffect(() => {
+    if (editingValue && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingValue]);
 
   // Keep highlighted item visible
   useEffect(() => {
@@ -211,7 +232,7 @@ export function SearchableDropdown({
             contentClassName,
           )}
         >
-          {/* Integrated Search Bar - completely outline-free and box-free */}
+          {/* Integrated Search Bar with Touch-Friendly Manage Mode Toggle */}
           <div className="relative flex items-center px-2.5 py-1.5 border-b border-border/50 mb-1">
             <Search size={13} className="shrink-0 text-muted-foreground mr-2" />
             <input
@@ -239,7 +260,33 @@ export function SearchableDropdown({
                 <X size={12} />
               </button>
             )}
+            {(onEdit || onDelete) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManageMode((prev) => !prev);
+                  setEditingValue(null);
+                  setConfirmDeleteValue(null);
+                }}
+                className={cn(
+                  "shrink-0 ml-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-medium transition-all cursor-pointer select-none",
+                  isManageMode
+                    ? "bg-orange-500 text-white shadow-xs"
+                    : "text-muted-foreground hover:text-foreground bg-subtle-background hover:bg-subtle-background/80 active:scale-95",
+                )}
+                title={isManageMode ? "Exit manage mode" : "Manage items (Edit/Delete)"}
+              >
+                {isManageMode ? "Done" : "Manage"}
+              </button>
+            )}
           </div>
+
+          {/* Manage mode banner for touch devices */}
+          {isManageMode && (
+            <div className="px-2.5 py-1 mb-1.5 bg-orange-500/10 border border-orange-500/20 rounded-lg text-[10.5px] text-orange-600 dark:text-orange-400 font-medium flex items-center justify-between animate-in fade-in-0 duration-100">
+              <span>Tap item to rename, or tap trash to delete</span>
+            </div>
+          )}
 
           {/* Quick add option when search query doesn't match */}
           {onAdd && !exactMatchExists && query.trim() && (
@@ -264,6 +311,67 @@ export function SearchableDropdown({
                 const isSelected = option.value === value;
                 const isHighlighted = idx === highlightedIndex;
                 const isDeleting = confirmDeleteValue === option.value;
+                const isEditing = editingValue === option.value;
+
+                if (isEditing) {
+                  return (
+                    <div
+                      key={option.value}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1.5 w-full px-2 py-1 my-0.5 rounded-lg bg-subtle-background border border-orange-500/40 dark:border-orange-400/40 shadow-xs"
+                    >
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const trimmed = editingName.trim();
+                            if (trimmed && onEdit) {
+                              onEdit(option.value, trimmed);
+                            }
+                            setEditingValue(null);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingValue(null);
+                          }
+                        }}
+                        className="flex-1 min-w-0 bg-transparent text-[12px] text-foreground outline-none focus:outline-none border-none p-0 focus:ring-0"
+                        placeholder="Rename..."
+                      />
+                      <button
+                        type="button"
+                        title="Save rename (Enter)"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const trimmed = editingName.trim();
+                          if (trimmed && onEdit) {
+                            onEdit(option.value, trimmed);
+                          }
+                          setEditingValue(null);
+                        }}
+                        className="p-1 rounded text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 cursor-pointer transition-colors"
+                      >
+                        <Check size={12} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Cancel (Esc)"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingValue(null);
+                        }}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-subtle-background cursor-pointer transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  );
+                }
 
                 return (
                   <div
@@ -271,6 +379,13 @@ export function SearchableDropdown({
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => {
+                      if (isManageMode) {
+                        if (onEdit) {
+                          setEditingValue(option.value);
+                          setEditingName(option.label);
+                        }
+                        return;
+                      }
                       onChange(option.value);
                       setOpen(false);
                     }}
@@ -281,6 +396,7 @@ export function SearchableDropdown({
                         ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-500/10 dark:bg-orange-400/15"
                         : "text-muted-foreground hover:text-foreground",
                       isHighlighted && !isSelected && "bg-subtle-background/50",
+                      isManageMode && "hover:bg-orange-500/5",
                     )}
                   >
                     <div className="flex flex-col min-w-0 flex-1 pr-2">
@@ -296,6 +412,26 @@ export function SearchableDropdown({
                       className="flex items-center gap-1 shrink-0"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {onEdit && !isDeleting && (
+                        <button
+                          type="button"
+                          title={`Edit ${option.label}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingValue(option.value);
+                            setEditingName(option.label);
+                            setConfirmDeleteValue(null);
+                          }}
+                          className={cn(
+                            "p-1.5 sm:p-1 size-7 sm:size-6 flex items-center justify-center rounded-md transition-all cursor-pointer active:scale-95",
+                            isManageMode
+                              ? "opacity-100 bg-orange-500/15 text-orange-600 dark:text-orange-400 hover:bg-orange-500/25"
+                              : "opacity-75 sm:opacity-0 sm:group-hover:opacity-100 hover:opacity-100 active:opacity-100 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 active:bg-orange-500/15",
+                          )}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      )}
                       {onDelete && (
                         isDeleting ? (
                           <button
@@ -306,7 +442,7 @@ export function SearchableDropdown({
                               onDelete(option.value);
                               setConfirmDeleteValue(null);
                             }}
-                            className="flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500 text-white hover:bg-red-600 transition-colors cursor-pointer"
+                            className="flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-red-500 text-white hover:bg-red-600 active:bg-red-700 transition-colors cursor-pointer active:scale-95"
                           >
                             Delete?
                           </button>
@@ -318,14 +454,16 @@ export function SearchableDropdown({
                               e.stopPropagation();
                               setConfirmDeleteValue(option.value);
                             }}
-                            className="opacity-0 group-hover:opacity-100 hover:opacity-100 p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all cursor-pointer"
+                            className={cn(
+                              "p-1.5 sm:p-1 size-7 sm:size-6 flex items-center justify-center rounded-md transition-all cursor-pointer active:scale-95",
+                              isManageMode
+                                ? "opacity-100 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20"
+                                : "opacity-75 sm:opacity-0 sm:group-hover:opacity-100 hover:opacity-100 active:opacity-100 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 active:bg-red-500/15",
+                            )}
                           >
                             <Trash2 size={12} />
                           </button>
                         )
-                      )}
-                      {isSelected && !isDeleting && (
-                        <Check size={13} className="shrink-0 text-orange-600 dark:text-orange-400 ml-1" />
                       )}
                     </div>
                   </div>

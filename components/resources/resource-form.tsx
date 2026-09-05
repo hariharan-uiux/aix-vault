@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { SearchableDropdown } from "@/components/ui/searchable-dropdown";
-import { categories, categoryById, resourceTypes, tags } from "@/lib/taxonomy";
+import { categoryById, tags } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
 import { cn, cleanResourceName } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -32,11 +32,14 @@ export function ResourceForm() {
     categories,
     resourceTypes,
     addCategory,
+    editCategory,
     deleteCategory,
     addResourceType,
+    editResourceType,
     deleteResourceType,
   } = useVault();
   const defaultCategory = navigation.kind === "category" ? navigation.categoryId : "development";
+  const defaultCollectionId = navigation.kind === "collection" ? navigation.collectionId : "";
   const [url, setUrl] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -44,7 +47,7 @@ export function ResourceForm() {
   const [type, setType] = useState("tool");
   const [pricing, setPricing] = useState<"Free" | "Freemium">("Freemium");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [collectionId, setCollectionId] = useState("");
+  const [collectionId, setCollectionId] = useState(defaultCollectionId);
   const [error, setError] = useState<string | null>(null);
   const [existingId, setExistingId] = useState<string | null>(null);
   const [metaNote, setMetaNote] = useState<string | null>(null);
@@ -139,20 +142,31 @@ export function ResourceForm() {
     setType("tool");
     setPricing("Freemium");
     setSelectedTags([]);
-    setCollectionId("");
+    setCollectionId(navigation.kind === "collection" ? navigation.collectionId : "");
     setError(null);
     setExistingId(null);
     setMetaNote(null);
     setSubmitting(false);
   }
 
+  const currentCollection =
+    navigation.kind === "collection"
+      ? collections.find((c) => c.id === navigation.collectionId)
+      : null;
+
   return (
     <Drawer
       open={addOpen}
-      title="Add Resource"
+      title={currentCollection ? `Add Tool to ${currentCollection.name}` : "Add Resource"}
       headerActions={
-        <h3 className="text-[14px] font-medium text-foreground truncate">
-          Add Resource
+        <h3 className="text-[14px] font-medium text-foreground truncate max-w-[240px] sm:max-w-[280px]">
+          {currentCollection ? (
+            <span>
+              Add Tool to <span className="font-semibold text-orange-600 dark:text-orange-400">{currentCollection.name}</span>
+            </span>
+          ) : (
+            "Add Resource"
+          )}
         </h3>
       }
       onClose={() => {
@@ -161,7 +175,7 @@ export function ResourceForm() {
       }}
     >
       <form
-        className="space-y-4 pt-4 sm:pt-5"
+        className="space-y-2 sm:space-y-3.5 pt-1.5 sm:pt-4"
         onSubmit={async (event) => {
           event.preventDefault();
           if (submitting) return;
@@ -190,53 +204,55 @@ export function ResourceForm() {
         }}
       >
         <label className="block">
-          <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">URL</span>
+          <span className="mb-1 block text-[11px] sm:text-[12px] font-medium text-muted-foreground">URL</span>
           <Input
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             placeholder="https://example.com"
             required
-            className="h-9 rounded-full bg-subtle-background/50 focus:bg-background text-[13px]"
+            className="h-8 sm:h-9 rounded-full bg-subtle-background/50 focus:bg-background text-[12px] sm:text-[13px] px-3"
             autoFocus
           />
         </label>
         {loadingMeta ? (
-          <p className="text-[12px] text-subtle-foreground flex items-center gap-1.5 animate-pulse">
+          <p className="text-[11px] sm:text-[12px] text-subtle-foreground flex items-center gap-1.5 animate-pulse py-0.5">
             <span>Detecting details…</span>
           </p>
         ) : null}
         {metaNote ? (
-          <p className="text-[12px] text-muted-foreground bg-subtle-background/60 rounded-xl px-3 py-2 border border-border/60">
+          <p className="text-[11px] sm:text-[12px] text-muted-foreground bg-subtle-background/60 rounded-xl px-2.5 py-1.5 border border-border/60">
             {metaNote}
           </p>
         ) : null}
 
         <label className="block">
-          <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">Name</span>
+          <span className="mb-1 block text-[11px] sm:text-[12px] font-medium text-muted-foreground">Name</span>
           <Input
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Resource name"
             required
-            className="h-9 rounded-full bg-subtle-background/50 focus:bg-background text-[13px]"
+            className="h-8 sm:h-9 rounded-full bg-subtle-background/50 focus:bg-background text-[12px] sm:text-[13px] px-3"
           />
         </label>
 
         <label className="block">
-          <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">Description</span>
+          <span className="mb-1 block text-[11px] sm:text-[12px] font-medium text-muted-foreground">
+            Description <span className="font-normal text-muted-foreground/60">(optional)</span>
+          </span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Brief summary of the tool or resource"
-            rows={3}
-            className="w-full rounded-2xl border border-border bg-subtle-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-subtle-foreground focus:bg-background outline-none focus:outline-none focus:border-foreground/50 resize-none transition-colors"
+            rows={2}
+            className="w-full rounded-xl sm:rounded-2xl border border-border bg-subtle-background/50 px-3 py-1.5 sm:py-2 text-[12px] sm:text-[13px] text-foreground placeholder:text-subtle-foreground focus:bg-background outline-none focus:outline-none focus:border-foreground/50 resize-none transition-colors min-h-[42px] sm:min-h-[58px]"
           />
         </label>
 
         {/* Category & Type in horizontal format */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
           <div>
-            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">
+            <span className="mb-1 block text-[11px] sm:text-[12px] font-medium text-muted-foreground">
               Category
             </span>
             <SearchableDropdown
@@ -247,19 +263,20 @@ export function ResourceForm() {
               placeholder="Select category"
               align="left"
               className="w-full"
-              triggerClassName="w-full justify-between h-9 rounded-full px-3 text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
-              contentClassName="w-[min(calc(100vw-3rem),260px)]"
+              triggerClassName="w-full justify-between h-8 sm:h-9 rounded-full px-2.5 sm:px-3 text-[12px] sm:text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
+              contentClassName="w-[min(calc(100vw-2.5rem),260px)]"
               onAdd={(name) => {
                 const newCat = addCategory(name);
                 if (newCat) setCategoryId(newCat.id);
               }}
               addLabel="Category"
+              onEdit={editCategory}
               onDelete={deleteCategory}
             />
           </div>
 
           <div>
-            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">
+            <span className="mb-1 block text-[11px] sm:text-[12px] font-medium text-muted-foreground">
               Type
             </span>
             <SearchableDropdown
@@ -270,25 +287,26 @@ export function ResourceForm() {
               placeholder="Select type"
               align="right"
               className="w-full"
-              triggerClassName="w-full justify-between h-9 rounded-full px-3 text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
-              contentClassName="w-[min(calc(100vw-3rem),220px)]"
+              triggerClassName="w-full justify-between h-8 sm:h-9 rounded-full px-2.5 sm:px-3 text-[12px] sm:text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
+              contentClassName="w-[min(calc(100vw-2.5rem),220px)]"
               onAdd={(name) => {
                 const newType = addResourceType(name);
                 if (newType) setType(newType.slug);
               }}
               addLabel="Type"
+              onEdit={editResourceType}
               onDelete={deleteResourceType}
             />
           </div>
         </div>
 
         {/* Pricing & Folder in horizontal format */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
           <div>
-            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">
+            <span className="mb-1 block text-[11px] sm:text-[12px] font-medium text-muted-foreground">
               Pricing
             </span>
-            <div className="grid grid-cols-2 gap-1 rounded-full bg-subtle-background/50 p-1 border border-border h-9 items-center">
+            <div className="grid grid-cols-2 gap-0.5 sm:gap-1 rounded-full bg-subtle-background/50 p-0.5 sm:p-1 border border-border h-8 sm:h-9 items-center">
               {(["Free", "Freemium"] as const).map((p) => {
                 const active = pricing === p;
                 return (
@@ -297,9 +315,9 @@ export function ResourceForm() {
                     type="button"
                     onClick={() => setPricing(p)}
                     className={cn(
-                      "flex h-full items-center justify-center rounded-full text-[11.5px] font-medium text-center transition-all cursor-pointer select-none",
+                      "flex h-full items-center justify-center rounded-full text-[11px] sm:text-[11.5px] font-medium text-center transition-all cursor-pointer select-none",
                       active
-                        ? "bg-background text-foreground font-semibold border border-border/80"
+                        ? "bg-background text-foreground font-semibold border border-border/80 shadow-2xs"
                         : "text-muted-foreground hover:text-foreground border border-transparent",
                     )}
                   >
@@ -311,7 +329,7 @@ export function ResourceForm() {
           </div>
 
           <div>
-            <span className="mb-1.5 block text-[12px] font-medium text-muted-foreground">
+            <span className="mb-1 block text-[11px] sm:text-[12px] font-medium text-muted-foreground">
               Folder / Collection
             </span>
             <SearchableDropdown
@@ -322,16 +340,29 @@ export function ResourceForm() {
               placeholder="Choose folder..."
               align="right"
               className="w-full"
-              triggerClassName="w-full justify-between h-9 rounded-full px-3 text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
-              contentClassName="w-[min(calc(100vw-3rem),260px)]"
+              triggerClassName="w-full justify-between h-8 sm:h-9 rounded-full px-2.5 sm:px-3 text-[12px] sm:text-[13px] bg-subtle-background/50 border border-border hover:border-foreground/30 text-foreground font-normal"
+              contentClassName="w-[min(calc(100vw-2.5rem),260px)]"
             />
           </div>
         </div>
 
         <div>
-          <p className="mb-1.5 text-[12px] font-medium text-muted-foreground">Tags</p>
-          <div className="flex flex-wrap gap-1.5">
-            {tags.slice(0, 14).map((tag) => {
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] sm:text-[12px] font-medium text-muted-foreground">
+              Tags {selectedTags.length > 0 && <span className="text-orange-600 dark:text-orange-400 font-semibold">({selectedTags.length})</span>}
+            </span>
+            {selectedTags.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedTags([])}
+                className="text-[10.5px] text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-nowrap sm:flex-wrap gap-1.5 overflow-x-auto sm:overflow-visible pb-1 sm:pb-0 scrollbar-none -mx-0.5 px-0.5">
+            {tags.slice(0, 18).map((tag) => {
               const active = selectedTags.includes(tag.id);
               return (
                 <button
@@ -345,7 +376,7 @@ export function ResourceForm() {
                     )
                   }
                   className={cn(
-                    "rounded-full border px-2.5 py-0.5 text-[11.5px] font-medium transition-colors cursor-pointer",
+                    "shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] sm:text-[11.5px] font-medium transition-colors cursor-pointer whitespace-nowrap select-none active:scale-95",
                     active
                       ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium"
                       : "border-border bg-subtle-background/50 text-muted-foreground hover:bg-subtle-background hover:text-foreground",
@@ -359,7 +390,7 @@ export function ResourceForm() {
         </div>
 
         {error ? (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-[12.5px] text-red-600 dark:text-red-400 leading-relaxed">
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-[12px] text-red-600 dark:text-red-400 leading-relaxed">
             <p>{error}</p>
             {existingId ? (
               <button
@@ -377,7 +408,7 @@ export function ResourceForm() {
           </div>
         ) : null}
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
+        <div className="flex items-center justify-end gap-2 pt-2 sm:pt-3 border-t border-border/60">
           <Button
             type="button"
             variant="ghost"
@@ -386,14 +417,14 @@ export function ResourceForm() {
               setAddOpen(false);
               reset();
             }}
-            className="h-9 px-4 text-[13px]"
+            className="h-8 sm:h-9 px-3.5 sm:px-4 text-[12px] sm:text-[13px]"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={submitting}
-            className="h-9 px-4 text-[13px] inline-flex items-center gap-2"
+            className="h-8 sm:h-9 px-3.5 sm:px-4 text-[12px] sm:text-[13px] inline-flex items-center gap-1.5"
           >
             {submitting ? (
               <>

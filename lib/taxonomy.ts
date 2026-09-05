@@ -152,11 +152,36 @@ export function unregisterCategory(id: string) {
   deletedCategories.add(id);
 }
 
+export function updateCategory(id: string, name: string): Category | undefined {
+  const existing = categoryById(id);
+  if (!existing) return undefined;
+  const updated: Category = {
+    ...existing,
+    name,
+    description: existing.description === existing.name ? name : existing.description,
+  };
+  dynamicCategories.set(id, updated);
+  deletedCategories.delete(id);
+  return updated;
+}
+
 export function getAllCategories(customCats: Category[] = [], deletedIds: string[] = []): Category[] {
   const deletedSet = new Set([...deletedCategories, ...deletedIds]);
-  const base = categories.filter((c) => !deletedSet.has(c.id));
-  const custom = customCats.filter((c) => !deletedSet.has(c.id) && !base.some((b) => b.id === c.id));
-  return [...base, ...custom];
+  const customMap = new Map<string, Category>();
+  customCats.forEach((c) => {
+    if (!deletedSet.has(c.id)) customMap.set(c.id, c);
+  });
+  dynamicCategories.forEach((c, id) => {
+    if (!deletedSet.has(id)) customMap.set(id, c);
+  });
+
+  const base = categories
+    .filter((c) => !deletedSet.has(c.id))
+    .map((c) => customMap.get(c.id) ?? c);
+
+  const baseIds = new Set(base.map((c) => c.id));
+  const customOnly = Array.from(customMap.values()).filter((c) => !baseIds.has(c.id));
+  return [...base, ...customOnly];
 }
 
 export function categoryById(id: string) {
@@ -183,11 +208,40 @@ export function unregisterResourceType(idOrSlug: string) {
   deletedTypes.add(idOrSlug);
 }
 
+export function updateResourceType(idOrSlug: string, name: string): ResourceType | undefined {
+  const existing = typeBySlug(idOrSlug);
+  if (!existing) return undefined;
+  const updated: ResourceType = {
+    ...existing,
+    name,
+  };
+  dynamicTypes.set(updated.slug, updated);
+  dynamicTypes.set(updated.id, updated);
+  deletedTypes.delete(updated.slug);
+  deletedTypes.delete(updated.id);
+  return updated;
+}
+
 export function getAllResourceTypes(customTypes: ResourceType[] = [], deletedIds: string[] = []): ResourceType[] {
   const deletedSet = new Set([...deletedTypes, ...deletedIds]);
-  const base = resourceTypes.filter((t) => !deletedSet.has(t.id) && !deletedSet.has(t.slug));
-  const custom = customTypes.filter((t) => !deletedSet.has(t.id) && !deletedSet.has(t.slug) && !base.some((b) => b.slug === t.slug));
-  return [...base, ...custom];
+  const customMap = new Map<string, ResourceType>();
+  customTypes.forEach((t) => {
+    if (!deletedSet.has(t.id) && !deletedSet.has(t.slug)) {
+      customMap.set(t.slug, t);
+      customMap.set(t.id, t);
+    }
+  });
+  dynamicTypes.forEach((t, key) => {
+    if (!deletedSet.has(key)) customMap.set(key, t);
+  });
+
+  const base = resourceTypes
+    .filter((t) => !deletedSet.has(t.id) && !deletedSet.has(t.slug))
+    .map((t) => customMap.get(t.slug) ?? customMap.get(t.id) ?? t);
+
+  const baseSlugs = new Set(base.map((t) => t.slug));
+  const customOnly = Array.from(new Set(customMap.values())).filter((t) => !baseSlugs.has(t.slug));
+  return [...base, ...customOnly];
 }
 
 export function typeBySlug(slug: string) {

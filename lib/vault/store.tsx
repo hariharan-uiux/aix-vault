@@ -28,6 +28,10 @@ import {
   unregisterCategory,
   registerResourceType,
   unregisterResourceType,
+  updateCategory,
+  updateResourceType,
+  categoryById,
+  typeBySlug,
 } from "@/lib/taxonomy";
 import {
   createContext,
@@ -233,6 +237,7 @@ type VaultContextValue = {
   sidebarOpen: boolean;
   sidebarCollapsed: boolean;
   addOpen: boolean;
+  folderAddOpen: boolean;
   commandOpen: boolean;
   authModalOpen: boolean;
   toast: string | null;
@@ -255,6 +260,7 @@ type VaultContextValue = {
   setSidebarOpen: (open: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   setAddOpen: (open: boolean) => void;
+  setFolderAddOpen: (open: boolean) => void;
   setCommandOpen: (open: boolean) => void;
   setAuthModalOpen: (open: boolean) => void;
   setTheme: (theme: "light" | "dark", event?: React.MouseEvent | MouseEvent) => void;
@@ -283,8 +289,10 @@ type VaultContextValue = {
   categories: Category[];
   resourceTypes: ResourceType[];
   addCategory: (name: string, parentId?: string) => Category | null;
+  editCategory: (id: string, newName: string) => void;
   deleteCategory: (id: string) => void;
   addResourceType: (name: string) => ResourceType | null;
+  editResourceType: (idOrSlug: string, newName: string) => void;
   deleteResourceType: (id: string) => void;
   syncLocalToCloud: () => Promise<{ ok: boolean; syncedCount?: number; error?: string }>;
 };
@@ -360,6 +368,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [folderAddOpen, setFolderAddOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -599,6 +608,19 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         setRemoteResources(fetchedResources);
         setLastSyncedAt(new Date());
         setIsDatabaseConnected(true);
+
+        // Clean up extras that now exist in remoteResources to prevent duplicate/re-upload loops
+        setExtras((prevExtras) => {
+          if (prevExtras.length === 0) return prevExtras;
+          const remoteIdSet = new Set(fetchedResources.map((r) => r.id));
+          const remoteUrlSet = new Set(
+            fetchedResources.map((r) => r.url.toLowerCase().replace(/\/$/, "")),
+          );
+          return prevExtras.filter(
+            (e) => !remoteIdSet.has(e.id) && !remoteUrlSet.has(e.url.toLowerCase().replace(/\/$/, "")),
+          );
+        });
+
         try {
           if (typeof window !== "undefined") {
             window.localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify(fetchedResources));
@@ -669,22 +691,14 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               updatedAt: c.updated_at,
             }),
           );
-          // Merge: DB collections + any local-only collections not yet in DB
+          // Supabase is the canonical truth for collections and folder resources
           setCollections((localCols) => {
             const dbIdSet = new Set(dbCollections.map((c) => c.id));
-            // Read deleted collection IDs from localStorage to filter them out
-            let deletedColIds: string[] = [];
-            try {
-              const raw = window.localStorage.getItem(STORAGE_KEY);
-              if (raw) {
-                const parsed = JSON.parse(raw);
-                deletedColIds = Array.isArray(parsed.deletedCollectionIds) ? parsed.deletedCollectionIds : [];
-              }
-            } catch {}
-            const deletedSet = new Set(deletedColIds);
-            const localOnly = localCols.filter((c) => !dbIdSet.has(c.id) && !deletedSet.has(c.id));
-            const fromDb = dbCollections.filter((c) => !deletedSet.has(c.id));
-            return [...fromDb, ...localOnly];
+            // Only keep local collections if they are very recent (in-flight optimistic updates < 10s old)
+            const inFlightLocal = localCols.filter(
+              (c) => !dbIdSet.has(c.id) && Date.now() - new Date(c.createdAt).getTime() < 10000,
+            );
+            return [...dbCollections, ...inFlightLocal];
           });
         }
         if (Array.isArray(json.collectionResources)) {
@@ -695,13 +709,13 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               createdAt: cr.created_at,
             }),
           );
-          // Merge: DB collection_resources + any local-only links
+          // Canonical database collection resources
           setCollectionResources((localCR) => {
             const dbKeySet = new Set(dbCollRes.map((cr) => `${cr.collectionId}::${cr.resourceId}`));
-            const localOnly = localCR.filter(
-              (cr) => !dbKeySet.has(`${cr.collectionId}::${cr.resourceId}`),
+            const inFlightCR = localCR.filter(
+              (cr) => !dbKeySet.has(`${cr.collectionId}::${cr.resourceId}`) && Date.now() - new Date(cr.createdAt).getTime() < 10000,
             );
-            return [...dbCollRes, ...localOnly];
+            return [...dbCollRes, ...inFlightCR];
           });
         }
       }
@@ -813,6 +827,15 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           setSavedIds((localSaved) => {
             const dbSet = new Set(json.savedIds as string[]);
             const localOnly = localSaved.filter((id) => !dbSet.has(id));
+            if (localOnly.length > 0 && currentUser?.id) {
+              for (const rid of localOnly) {
+                fetch("/api/saved", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: currentUser.id, resourceId: rid, action: "save" }),
+                }).catch(() => {});
+              }
+            }
             return [...json.savedIds, ...localOnly];
           });
         }
@@ -1530,11 +1553,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ collection }),
-      }).catch((e) => console.warn("Could not sync collection:", e));
+      })
+        .then(() => {
+          broadcastSync();
+        })
+        .catch((e) => console.warn("Could not sync collection:", e));
 
+      broadcastSync();
       return collection;
     },
-    [currentUser?.id, isAdmin],
+    [currentUser?.id, isAdmin, broadcastSync],
   );
 
   const renameCollection = useCallback(
@@ -1560,11 +1588,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           collection: { id, name: trimmed, slug: slugify(trimmed) },
         }),
-      }).catch((e) => console.warn("Could not rename collection:", e));
+      })
+        .then(() => {
+          broadcastSync();
+        })
+        .catch((e) => console.warn("Could not rename collection:", e));
 
       setToast("Folder renamed.");
+      broadcastSync();
     },
-    [isAdmin],
+    [isAdmin, broadcastSync],
   );
 
   const deleteCollection = useCallback(
@@ -1586,11 +1619,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
       fetch(`/api/collections?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
-      }).catch((e) => console.warn("Could not delete collection:", e));
+      })
+        .then(() => {
+          broadcastSync();
+        })
+        .catch((e) => console.warn("Could not delete collection:", e));
 
       setToast("Folder deleted.");
+      broadcastSync();
     },
-    [isAdmin],
+    [isAdmin, broadcastSync],
   );
 
   const setSelectMode = useCallback((active: boolean) => {
@@ -1676,15 +1714,20 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             resourceIds: newItems.map((item) => item.resourceId),
             collectionId,
           }),
-        }).catch((e) => console.warn("Could not batch add resources to collection:", e));
+        })
+          .then(() => {
+            broadcastSync();
+          })
+          .catch((e) => console.warn("Could not batch add resources to collection:", e));
 
         return [...newItems, ...current];
       });
 
       setSelectedResourceIds([]);
       setIsSelectMode(false);
+      broadcastSync();
     },
-    [isAdmin, collections],
+    [isAdmin, collections, broadcastSync],
   );
 
   const removeResourcesFromCollection = useCallback(
@@ -1714,15 +1757,20 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               resourceIds,
               collectionId,
             }),
-          }).catch((e) => console.warn("Could not batch remove resources from collection:", e));
+          })
+            .then(() => {
+              broadcastSync();
+            })
+            .catch((e) => console.warn("Could not batch remove resources from collection:", e));
         }
         return remaining;
       });
 
       setSelectedResourceIds([]);
       setIsSelectMode(false);
+      broadcastSync();
     },
-    [isAdmin, collections],
+    [isAdmin, collections, broadcastSync],
   );
 
   const addCategory = useCallback(
@@ -1815,6 +1863,62 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     [isAdmin, broadcastSync],
   );
 
+  const editCategory = useCallback(
+    (id: string, newName: string) => {
+      if (!isAdmin) {
+        setToast("Admin profile required to edit categories.");
+        return;
+      }
+      const trimmed = newName.trim();
+      if (!trimmed) return;
+
+      const existing = categoryById(id);
+      const updatedCat: Category = {
+        id,
+        name: trimmed,
+        slug: existing?.slug || id,
+        description: existing?.description === existing?.name ? trimmed : existing?.description || trimmed,
+        icon: existing?.icon || null,
+        parentId: existing?.parentId || null,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+      };
+
+      registerCategory(updatedCat);
+      setCategoriesState((prev) =>
+        prev.map((c) => (c.id === id ? updatedCat : c))
+      );
+
+      if (typeof window !== "undefined") {
+        try {
+          const raw = window.localStorage.getItem(STORAGE_KEY);
+          const cur = raw ? JSON.parse(raw) : {};
+          const customCats = Array.isArray(cur.customCategories) ? cur.customCategories : [];
+          const updatedCats = [
+            ...customCats.filter((c: Category) => c.id !== id),
+            updatedCat,
+          ];
+          const deletedCatIds = Array.isArray(cur.deletedCategoryIds)
+            ? cur.deletedCategoryIds.filter((cid: string) => cid !== id)
+            : [];
+          window.localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ ...cur, customCategories: updatedCats, deletedCategoryIds: deletedCatIds }),
+          );
+        } catch {}
+      }
+
+      fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedCat),
+      }).catch((e) => console.warn("Could not sync category edit:", e));
+
+      setToast(`Category renamed to "${trimmed}".`);
+      broadcastSync();
+    },
+    [isAdmin, broadcastSync],
+  );
+
   const addResourceType = useCallback(
     (name: string) => {
       if (!isAdmin) {
@@ -1896,6 +2000,59 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       }).catch((e) => console.warn("Could not delete resource type:", e));
 
       setToast("Tool type deleted.");
+      broadcastSync();
+    },
+    [isAdmin, broadcastSync],
+  );
+
+  const editResourceType = useCallback(
+    (idOrSlug: string, newName: string) => {
+      if (!isAdmin) {
+        setToast("Admin profile required to edit tool types.");
+        return;
+      }
+      const trimmed = newName.trim();
+      if (!trimmed) return;
+
+      const existing = typeBySlug(idOrSlug);
+      const slug = existing?.slug || idOrSlug;
+      const updatedType: ResourceType = {
+        id: existing?.id || slug,
+        name: trimmed,
+        slug,
+      };
+
+      registerResourceType(updatedType);
+      setResourceTypesState((prev) =>
+        prev.map((t) => (t.id === idOrSlug || t.slug === idOrSlug || t.slug === slug ? updatedType : t))
+      );
+
+      if (typeof window !== "undefined") {
+        try {
+          const raw = window.localStorage.getItem(STORAGE_KEY);
+          const cur = raw ? JSON.parse(raw) : {};
+          const customTypes = Array.isArray(cur.customResourceTypes) ? cur.customResourceTypes : [];
+          const updatedTypes = [
+            ...customTypes.filter((t: ResourceType) => t.slug !== slug && t.id !== idOrSlug),
+            updatedType,
+          ];
+          const deletedTypeIds = Array.isArray(cur.deletedResourceTypeIds)
+            ? cur.deletedResourceTypeIds.filter((tid: string) => tid !== slug && tid !== idOrSlug)
+            : [];
+          window.localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ ...cur, customResourceTypes: updatedTypes, deletedResourceTypeIds: deletedTypeIds }),
+          );
+        } catch {}
+      }
+
+      fetch("/api/resource-types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedType),
+      }).catch((e) => console.warn("Could not sync resource type edit:", e));
+
+      setToast(`Tool type renamed to "${trimmed}".`);
       broadcastSync();
     },
     [isAdmin, broadcastSync],
@@ -1988,6 +2145,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     sidebarOpen,
     sidebarCollapsed,
     addOpen,
+    folderAddOpen,
     commandOpen,
     authModalOpen,
     toast,
@@ -2059,6 +2217,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       setAddOpen(open);
       if (open) setSelectedId(null);
     },
+    setFolderAddOpen: (open) => {
+      setFolderAddOpen(open);
+    },
     setCommandOpen,
     setAuthModalOpen,
     setTheme,
@@ -2104,12 +2265,17 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "add_resource", resourceId, collectionId }),
-        }).catch(() => {});
+        })
+          .then(() => {
+            broadcastSync();
+          })
+          .catch(() => {});
         return [
           { collectionId, resourceId, createdAt: new Date().toISOString() },
           ...current,
         ];
       });
+      broadcastSync();
     },
     addResourcesToCollection,
     removeResourcesFromCollection,
@@ -2131,8 +2297,10 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     categories,
     resourceTypes: availableResourceTypes,
     addCategory,
+    editCategory,
     deleteCategory,
     addResourceType,
+    editResourceType,
     deleteResourceType,
     syncLocalToCloud,
   };

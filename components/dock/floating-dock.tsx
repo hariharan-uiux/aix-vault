@@ -42,8 +42,8 @@ export function FloatingDock() {
         className={cn(
           "pointer-events-auto frosted-dock relative flex items-center gap-1.5 sm:gap-1.5 rounded-full border border-black/10 dark:border-white/12 p-1.5 sm:p-1.5 transition-all duration-200 shadow-lg sm:shadow-md",
           isAdmin
-            ? "w-full max-w-[min(calc(100vw-5.25rem),24rem)] sm:w-auto sm:max-w-none"
-            : "w-full max-w-[min(calc(100vw-2rem),22rem)] sm:w-auto sm:max-w-none",
+            ? "w-full max-w-[min(calc(100vw-5.25rem),28rem)] sm:w-auto sm:max-w-none"
+            : "w-full max-w-[min(calc(100vw-2rem),26rem)] sm:w-auto sm:max-w-none",
         )}
       >
         {/* Home button when inside a folder */}
@@ -63,44 +63,51 @@ export function FloatingDock() {
         {/* Platform Mode: All / Dev / Design */}
         <PlatformToggle />
 
-        {/* Divider */}
-        <div className="h-5 sm:h-4 w-px shrink-0 bg-border/80 mx-0.5 sm:mx-0" />
+        {/* Folders Button (visible on both mobile and desktop) */}
+        <Tooltip label={sidebarOpen ? "Close collections" : "Collections & Folders"}>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={cn(
+              "relative flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer active:scale-95 select-none",
+              isFolder
+                ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
+                : sidebarOpen
+                  ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
+                  : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
+            )}
+            aria-label={sidebarOpen ? "Close collections" : "Collections & Folders"}
+          >
+            {sidebarOpen ? (
+              <FolderOpen
+                className={cn(
+                  "size-5 sm:size-3.5",
+                  isFolder ? "text-orange-600 dark:text-orange-400" : "text-foreground",
+                )}
+              />
+            ) : (
+              <Folder
+                className={cn(
+                  "size-5 sm:size-3.5",
+                  isFolder ? "text-orange-600 dark:text-orange-400" : "",
+                )}
+              />
+            )}
+            {isFolder && (
+              <span className="absolute top-1.5 right-1.5 sm:top-1 sm:right-1 size-2 sm:size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1.5 sm:ring-1 ring-background" />
+            )}
+          </button>
+        </Tooltip>
 
-        {/* Desktop Detailed Dock Controls (All buttons directly visible in the dock) */}
+        {/* Desktop Detailed Dock Controls (Filters, Sort, Select) */}
         <div className="hidden sm:flex items-center gap-1 sm:gap-1.5">
-          {/* 1. Folders Button */}
-          <Tooltip label={sidebarOpen ? "Close collections" : "Collections & Folders"}>
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={cn(
-                "relative flex size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer",
-                isFolder
-                  ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
-                  : sidebarOpen
-                    ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
-                    : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
-              )}
-              aria-label={sidebarOpen ? "Close collections" : "Collections & Folders"}
-            >
-              {sidebarOpen ? (
-                <FolderOpen size={14} className={isFolder ? "text-orange-600 dark:text-orange-400" : "text-foreground"} />
-              ) : (
-                <Folder size={14} className={isFolder ? "text-orange-600 dark:text-orange-400" : ""} />
-              )}
-              {isFolder && (
-                <span className="absolute top-1 right-1 size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-2 ring-background" />
-              )}
-            </button>
-          </Tooltip>
-
-          {/* 2. Filters Popover Button */}
+          {/* Filters Popover Button */}
           <FilterPopover side="top" align="center" iconOnly />
 
-          {/* 3. Sort Menu Popover Button */}
+          {/* Sort Menu Popover Button */}
           <SortMenu side="top" align="center" iconOnly />
 
-          {/* 4. Select Mode Button (Admin Only) */}
+          {/* Select Mode Button (Admin Only) */}
           {isAdmin && (
             <Tooltip label={isSelectMode ? "Exit selection (Escape)" : "Select multiple resources"}>
               <button
@@ -131,12 +138,12 @@ export function FloatingDock() {
 
       {/* Separate Add Resource Button (Admin Only) */}
       {isAdmin && (
-        <Tooltip label="Add resource (Space)">
+        <Tooltip label={isFolder ? "Add tool to this folder (Space)" : "Add resource (Space)"}>
           <button
             type="button"
             onClick={() => setAddOpen(true)}
             className="pointer-events-auto frosted-dock shrink-0 flex size-11 sm:size-10 items-center justify-center rounded-full border border-black/10 dark:border-white/12 text-foreground transition-all duration-200 hover:bg-subtle-background hover:scale-105 active:scale-95 cursor-pointer shadow-lg sm:shadow-md"
-            aria-label="Add resource"
+            aria-label={isFolder ? "Add tool to this folder" : "Add resource"}
           >
             <Plus size={19} className="sm:size-4" strokeWidth={2.2} />
           </button>

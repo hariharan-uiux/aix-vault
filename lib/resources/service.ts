@@ -149,7 +149,3 @@ export function filterResources(options: {
   const visible = list.slice(0, page * PAGE_SIZE);
   return { total, visible, hasMore: visible.length < total };
 }
-
-export function getResource(resources: Resource[], id: string) {
-  return resources.find((resource) => resource.id === id) ?? null;
-}

@@ -378,6 +378,8 @@ export function Sidebar() {
     renameCollection,
     theme,
     isAdmin,
+    setAddOpen,
+    setFolderAddOpen,
   } = useVault();
   const isDark = theme === "dark";
 
@@ -768,6 +770,22 @@ export function Sidebar() {
               {contextMenu.folderName}
             </div>
             <div className="my-1 h-px bg-border/60" />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const fId = contextMenu.folderId;
+                setContextMenu(null);
+                setNavigation({ kind: "collection", collectionId: fId });
+                setSidebarOpen(false);
+                setFolderAddOpen(true);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-foreground hover:bg-subtle-background transition-colors cursor-pointer"
+            >
+              <Plus size={13} className="text-muted-foreground" />
+              <span>Add Tools</span>
+            </button>
             <button
               type="button"
               onClick={(e) => {

@@ -12,6 +12,7 @@ import {
   Plus,
   Search,
   SquareCheck,
+  Trash2,
   X,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -240,6 +241,55 @@ function FolderPickerMenu() {
   );
 }
 
+function DeleteConfirmMenu({
+  onConfirm,
+  count,
+}: {
+  onConfirm: () => void;
+  count: number;
+}) {
+  const { close } = usePopover();
+  return (
+    <div
+      className="w-[min(calc(100vw-2rem),260px)] p-3.5 text-left text-foreground"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-start gap-2.5">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-600 dark:text-red-400 mt-0.5">
+          <Trash2 size={13} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-[13px] font-semibold text-foreground">
+            Delete {count} {count === 1 ? "resource" : "resources"}?
+          </h4>
+          <p className="mt-1 text-[12px] text-muted-foreground leading-normal">
+            This will permanently remove the selected {count === 1 ? "resource" : "resources"} from the vault.
+          </p>
+        </div>
+      </div>
+      <div className="mt-3.5 flex items-center justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={close}
+          className="rounded-full px-3 py-1 text-[11.5px] font-medium text-muted-foreground hover:bg-subtle-background hover:text-foreground transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            close();
+            onConfirm();
+          }}
+          className="rounded-full bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-[11.5px] font-medium transition-colors cursor-pointer"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function SelectionDock() {
   const {
     selectedResourceIds,
@@ -248,6 +298,8 @@ export function SelectionDock() {
     selectResources,
     deselectResources,
     setToast,
+    isAdmin,
+    deleteResource,
   } = useVault();
 
   const selectedCount = selectedResourceIds.length;
@@ -270,6 +322,15 @@ export function SelectionDock() {
       setToast(`${selectedCount} resource${selectedCount === 1 ? "" : "s"} selected.`);
     }
     clearSelection();
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedCount === 0) return;
+    const toDelete = [...selectedResourceIds];
+    clearSelection();
+    for (const id of toDelete) {
+      await deleteResource(id);
+    }
   };
 
   return (
@@ -346,6 +407,31 @@ export function SelectionDock() {
         >
           <FolderPickerMenu />
         </Popover>
+
+        {/* 5. Delete Action (Admin Only) */}
+        {isAdmin && selectedCount > 0 && (
+          <Tooltip label={`Delete ${selectedCount} selected`}>
+            <div>
+              <Popover
+                side="top"
+                align="center"
+                triggerClassName={({ open }) =>
+                  cn(
+                    "flex items-center justify-center size-10 sm:size-8 shrink-0 rounded-full border transition-all cursor-pointer select-none active:scale-95",
+                    open
+                      ? "bg-red-500/20 text-red-400 border-red-500/40"
+                      : "bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border-red-500/20",
+                  )
+                }
+                label={() => (
+                  <Trash2 size={16} strokeWidth={1.8} className="sm:size-[14px]" />
+                )}
+              >
+                <DeleteConfirmMenu count={selectedCount} onConfirm={handleDeleteSelected} />
+              </Popover>
+            </div>
+          </Tooltip>
+        )}
 
         {/* 5. Save Button (White Pill) */}
         <Tooltip label="Save selection">

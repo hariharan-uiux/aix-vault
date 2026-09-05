@@ -9,8 +9,6 @@ import {
   ArrowUpDown,
   Check,
   ChevronLeft,
-  Folder,
-  FolderOpen,
   MoreHorizontal,
   SlidersHorizontal,
   SquareCheck,
@@ -21,9 +19,6 @@ import { createPortal } from "react-dom";
 
 export function DockMoreMenu() {
   const {
-    sidebarOpen,
-    setSidebarOpen,
-    navigation,
     filters,
     setFilters,
     resourceTypes,
@@ -44,14 +39,13 @@ export function DockMoreMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  const isNavActive = navigation.kind === "collection";
   const activeFilterCount =
     (filters.type ? 1 : 0) +
     filters.tagIds.length +
     (filters.free ? 1 : 0) +
     (filters.openSource ? 1 : 0);
 
-  const hasActiveState = isNavActive || activeFilterCount > 0 || sidebarOpen;
+  const hasActiveState = activeFilterCount > 0 || sort !== "recent";
   const currentSortLabel = sorts.find((item) => item.id === sort)?.label ?? "Sort";
 
   useEffect(() => {
@@ -119,11 +113,11 @@ export function DockMoreMenu() {
     <>
       <div className="relative inline-flex items-center justify-center" ref={menuRef}>
         {/* Three-dot Trigger Button (toggles to X when open) */}
-        <Tooltip label={open ? "Close options" : "More options (Folders, Filters, Sort)"}>
+        <Tooltip label={open ? "Close options" : "More options (Filters, Sort)"}>
           <button
             type="button"
             aria-expanded={open}
-            aria-label={open ? "Close options" : "More options (Folders, Filters, Sort)"}
+            aria-label={open ? "Close options" : "More options (Filters, Sort)"}
             onClick={toggleOpen}
             className={cn(
               "relative flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer active:scale-95 select-none",
@@ -152,43 +146,12 @@ export function DockMoreMenu() {
             role="toolbar"
             aria-label="Quick actions"
           >
-            {/* 1. Folders Icon Button */}
-            <Tooltip label={sidebarOpen ? "Close collections" : "Collections & Folders"}>
-              <button
-                type="button"
-                onClick={() => {
-                  setSidebarOpen(!sidebarOpen);
-                  setOpen(false);
-                }}
-                style={{ animationDelay: "0ms" }}
-                className={cn(
-                  "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
-                  "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
-                  isNavActive
-                    ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-orange-500/10"
-                    : sidebarOpen
-                      ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
-                      : "border-black/[0.1] dark:border-white/[0.14] text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                )}
-                aria-label={sidebarOpen ? "Close collections" : "Collections & Folders"}
-              >
-                {sidebarOpen ? (
-                  <FolderOpen size={18} className={isNavActive ? "text-orange-600 dark:text-orange-400" : "text-foreground"} />
-                ) : (
-                  <Folder size={18} className={isNavActive ? "text-orange-600 dark:text-orange-400" : ""} />
-                )}
-                {isNavActive && (
-                  <span className="absolute top-1 right-1 size-2 rounded-full bg-orange-500 dark:bg-orange-400 ring-2 ring-background" />
-                )}
-              </button>
-            </Tooltip>
-
-            {/* 2. Filter Icon Button */}
+            {/* 1. Filter Icon Button */}
             <Tooltip label={activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters"}>
               <button
                 type="button"
                 onClick={() => setActiveTab("filter")}
-                style={{ animationDelay: "35ms" }}
+                style={{ animationDelay: "0ms" }}
                 className={cn(
                   "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
                   "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
@@ -207,12 +170,12 @@ export function DockMoreMenu() {
               </button>
             </Tooltip>
 
-            {/* 3. Sort Icon Button */}
+            {/* 2. Sort Icon Button */}
             <Tooltip label={`Sort: ${currentSortLabel}`}>
               <button
                 type="button"
                 onClick={() => setActiveTab("sort")}
-                style={{ animationDelay: "70ms" }}
+                style={{ animationDelay: "35ms" }}
                 className={cn(
                   "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
                   "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
@@ -229,7 +192,7 @@ export function DockMoreMenu() {
               </button>
             </Tooltip>
 
-            {/* 4. Select Button (Admin Only) */}
+            {/* 3. Select Button (Admin Only) */}
             {isAdmin && (
               <Tooltip label={isSelectMode ? "Exit selection" : "Select multiple resources"}>
                 <button
@@ -242,7 +205,7 @@ export function DockMoreMenu() {
                     }
                     setOpen(false);
                   }}
-                  style={{ animationDelay: "105ms" }}
+                  style={{ animationDelay: "70ms" }}
                   className={cn(
                     "relative flex size-10 items-center justify-center rounded-full border transition-all duration-150 cursor-pointer active:scale-90 select-none shadow-lg animate-speed-dial-pop",
                     "backdrop-blur-xl bg-background/90 dark:bg-[#141416]/95",
