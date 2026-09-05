@@ -18,17 +18,32 @@ export const resourceTypes: ResourceType[] = [
   "Community",
   "Open Source",
   "AI Tool",
+  "AI Image",
   "API",
   "Library",
   "Plugin",
   "Design System",
   "Color",
+  "Inspiration",
+  "Shaders",
+  "Mockup",
+  "Image",
+  "Animation",
+  "Web Design",
+  "Widgets",
+  "Hosting",
+  "Organization",
   "Other",
-].map((name) => ({
-  id: name.toLowerCase().replace(/\s+/g, "-"),
-  name,
-  slug: name.toLowerCase().replace(/\s+/g, "-"),
-}));
+].map((name) => {
+  let slug = name.toLowerCase().replace(/\s+/g, "-");
+  if (name === "Mockup") slug = "mock-up";
+  if (name === "Web Design") slug = "web-dev-design";
+  return {
+    id: slug,
+    name,
+    slug,
+  };
+});
 
 const top = (
   id: string,

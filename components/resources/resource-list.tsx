@@ -11,7 +11,7 @@ import { getResourcePricing } from "@/lib/taxonomy";
 import { cn } from "@/lib/utils";
 import { useVault } from "@/lib/vault/store";
 import type { Resource, ViewMode } from "@/types";
-import { Bookmark, Pencil, Trash2, X } from "lucide-react";
+import { Bookmark, Pencil, SquareCheck, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function ResourceList({
@@ -27,7 +27,15 @@ export function ResourceList({
   loading: boolean;
   onSelect: (id: string) => void;
 }) {
-  const { savedIds, saveResource, deleteResource, updateResource, isAdmin } = useVault();
+  const {
+    savedIds,
+    saveResource,
+    deleteResource,
+    updateResource,
+    isAdmin,
+    selectedResourceIds,
+    toggleSelectResource,
+  } = useVault();
 
   const [contextMenu, setContextMenu] = useState<{
     resource: Resource;
@@ -98,22 +106,30 @@ export function ResourceList({
     return (
       <div className="w-full">
         {view === "grid" && (
-          <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <div
-                key={index}
-                className="relative flex h-[104px] w-full flex-col justify-between gap-3 rounded-2xl border border-border bg-subtle-background/30 p-3.5 sm:p-4"
-              >
-                <div className="flex w-full items-center gap-2.5 sm:gap-3">
-                  <Skeleton className="size-8 shrink-0 rounded-xl" />
-                  <Skeleton className="h-4 w-28 sm:w-32 rounded-md" />
+          <div className="w-full border-y border-border -mt-px bg-background">
+            <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 xl:border-l xl:border-r border-border">
+              {Array.from({ length: 18 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="relative flex min-h-[108px] sm:min-h-[118px] w-full flex-col justify-between border-b border-r border-border bg-subtle-background/10 p-3 sm:p-3.5 xl:before:pointer-events-none xl:before:absolute xl:before:right-full xl:before:w-[100vw] xl:before:bottom-0 xl:before:h-px xl:before:bg-border xl:after:pointer-events-none xl:after:absolute xl:after:left-full xl:after:w-[100vw] xl:after:bottom-0 xl:after:h-px xl:after:bg-border"
+                >
+                  {/* Top: Icon + Name & Subtitle skeletons to the right */}
+                  <div className="flex w-full items-center gap-2.5 sm:gap-3">
+                    <Skeleton className="size-10 sm:size-11.5 shrink-0 rounded-[14px]" />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <Skeleton className="h-4 w-24 sm:w-32 rounded-md" />
+                      <Skeleton className="h-3 w-16 sm:w-20 rounded-md opacity-60" />
+                    </div>
+                  </div>
+
+                  {/* Bottom: Pricing badge + View icon button skeleton */}
+                  <div className="flex w-full items-center justify-between gap-2 pt-2">
+                    <Skeleton className="h-5 w-12 sm:w-14 rounded-full" />
+                    <Skeleton className="size-6.5 sm:size-7 rounded-full" />
+                  </div>
                 </div>
-                <div className="flex w-full items-center justify-between gap-2">
-                  <Skeleton className="h-7 w-16 rounded-full" />
-                  <Skeleton className="h-7 w-14 rounded-full" />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
@@ -138,13 +154,16 @@ export function ResourceList({
                 key={index}
                 className="flex items-center justify-between gap-3 border-b border-border/80 px-3 py-2.5 sm:px-4 sm:py-3 last:border-b-0"
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 flex-1">
-                  <Skeleton className="size-8 shrink-0 rounded-xl" />
-                  <Skeleton className="h-4 w-36 sm:w-48 rounded-md" />
+                <div className="flex items-center gap-3 flex-1">
+                  <Skeleton className="size-10 shrink-0 rounded-xl" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-4 w-36 sm:w-48 rounded-md" />
+                    <Skeleton className="h-3 w-48 sm:w-72 rounded-md opacity-60" />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-14 rounded-full" />
                   <Skeleton className="h-7 w-16 rounded-full" />
-                  <Skeleton className="h-7 w-14 rounded-full" />
                 </div>
               </div>
             ))}
@@ -178,16 +197,18 @@ export function ResourceList({
   return (
     <>
       {view === "grid" && (
-        <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-          {resources.map((resource) => (
-            <ResourceGridCard
-              key={resource.id}
-              resource={resource}
-              selected={selectedId === resource.id}
-              onSelect={onSelect}
-              onContextMenu={isAdmin ? handleContextMenu : undefined}
-            />
-          ))}
+        <div className="w-full border-y border-border -mt-px bg-background">
+          <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 xl:border-l xl:border-r border-border">
+            {resources.map((resource) => (
+              <ResourceGridCard
+                key={resource.id}
+                resource={resource}
+                selected={selectedId === resource.id}
+                onSelect={onSelect}
+                onContextMenu={isAdmin ? handleContextMenu : undefined}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -279,6 +300,25 @@ export function ResourceList({
 
             <div className="my-1.5 h-px bg-border/60" />
 
+            {/* Select Resource (Admin Only) */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  toggleSelectResource(activeContextMenuResource.id);
+                  setContextMenu(null);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-foreground hover:bg-subtle-background transition-colors cursor-pointer"
+              >
+                <SquareCheck size={13} className="text-muted-foreground" />
+                <span>
+                  {selectedResourceIds.includes(activeContextMenuResource.id)
+                    ? "Deselect Resource"
+                    : "Select Resource"}
+                </span>
+              </button>
+            )}
+
             {/* Edit Name & URL (Admin Only) */}
             {isAdmin && (
               <button
@@ -352,7 +392,7 @@ export function ResourceList({
                   autoFocus
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground focus:ring-1 focus:ring-foreground"
+                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground"
                   placeholder="e.g. Figma"
                 />
               </div>
@@ -364,7 +404,7 @@ export function ResourceList({
                 <input
                   value={editUrl}
                   onChange={(e) => setEditUrl(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:border-foreground focus:ring-1 focus:ring-foreground"
+                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground"
                   placeholder="https://..."
                 />
               </div>

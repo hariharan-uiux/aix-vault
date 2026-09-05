@@ -51,7 +51,7 @@ export function initials(name: string) {
 }
 
 export function faviconUrl(domain: string) {
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
 }
 
 export function cleanResourceName(

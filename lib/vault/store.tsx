@@ -65,6 +65,7 @@ type Persisted = {
   collectionResources: CollectionResource[];
   saveCounts: Record<string, number>;
   theme: "light" | "dark";
+  iconMode?: "mono" | "color";
   role?: UserRole;
   customCategories?: Category[];
   deletedCategoryIds?: string[];
@@ -202,7 +203,7 @@ function readInitialUrl(): {
   const view: ViewMode =
     viewParam === "grid" || viewParam === "compact" || viewParam === "list" ? viewParam : "grid";
   const sort: SortMode =
-    sortParam === "name" || sortParam === "saved" || sortParam === "recent" ? sortParam : "recent";
+    sortParam === "name" || sortParam === "recent" ? sortParam : "recent";
   return { navigation, search: query, filters, view, sort };
 }
 
@@ -228,7 +229,9 @@ type VaultContextValue = {
   commandOpen: boolean;
   authModalOpen: boolean;
   toast: string | null;
+  setToast: (toast: string | null) => void;
   theme: "light" | "dark";
+  iconMode: "mono" | "color";
   role: UserRole;
   isAdmin: boolean;
   currentUser: { id: string; email: string | null } | null;
@@ -248,10 +251,21 @@ type VaultContextValue = {
   setCommandOpen: (open: boolean) => void;
   setAuthModalOpen: (open: boolean) => void;
   setTheme: (theme: "light" | "dark", event?: React.MouseEvent | MouseEvent) => void;
+  setIconMode: (mode: "mono" | "color") => void;
   loginAsAdmin: (email: string, password?: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   saveResource: (id: string) => void;
   addToCollection: (resourceId: string, collectionId: string) => void;
+  addResourcesToCollection: (resourceIds: string[], collectionId: string) => void;
+  removeResourcesFromCollection: (resourceIds: string[], collectionId: string) => void;
+  isSelectMode: boolean;
+  selectedResourceIds: string[];
+  setSelectMode: (active: boolean) => void;
+  toggleSelectResource: (id: string) => void;
+  selectResources: (ids: string[]) => void;
+  deselectResources: (ids: string[]) => void;
+  selectAllVisible: (ids?: string[]) => void;
+  clearSelection: () => void;
   createCollection: (name: string) => Collection | null;
   renameCollection: (id: string, name: string) => void;
   deleteCollection: (id: string) => void;
@@ -269,6 +283,51 @@ type VaultContextValue = {
 };
 
 const VaultContext = createContext<VaultContextValue | null>(null);
+
+export function enrichResourceTags(resource: Resource): string[] {
+  const tags = new Set<string>(resource.tagIds || []);
+  const text = `${resource.name} ${resource.description || ""} ${resource.type || ""} ${resource.categoryId || ""}`.toLowerCase();
+
+  if (text.includes("react")) tags.add("react");
+  if (text.includes("figma")) tags.add("figma");
+  if (resource.type === "3d" || text.includes("3d") || text.includes("three.js")) tags.add("3d");
+  if (
+    resource.type === "component-library" ||
+    resource.type === "ui-kit" ||
+    text.includes("component")
+  )
+    tags.add("components");
+  if (resource.type === "icon-library" || text.includes("icon")) tags.add("icons");
+  if (resource.type === "font" || text.includes("font") || text.includes("typeface"))
+    tags.add("typography");
+  if (resource.type === "animation" || text.includes("animat") || text.includes("motion"))
+    tags.add("animation");
+  if (
+    resource.type?.startsWith("ai") ||
+    text.includes(" ai ") ||
+    text.includes("artificial intelligence") ||
+    text.includes("gpt")
+  )
+    tags.add("ai");
+  if (resource.type === "design-system" || text.includes("design system"))
+    tags.add("design-system");
+  if (text.includes("tailwind") || text.includes("css")) tags.add("css");
+  if (text.includes("saas")) tags.add("saas");
+  if (text.includes("mobile")) tags.add("mobile");
+  if (text.includes("minimal")) tags.add("minimal");
+  if (resource.type === "illustration" || text.includes("illustration"))
+    tags.add("illustration");
+  if (resource.type === "color" || text.includes("color") || text.includes("palette"))
+    tags.add("color");
+  if (text.includes("photo") || text.includes("unsplash")) tags.add("photos");
+  if (text.includes("productivity") || text.includes("workflow")) tags.add("productivity");
+  if (text.includes("collaboration") || text.includes("collaborative"))
+    tags.add("collaboration");
+  if (text.includes("prototype") || text.includes("prototyping")) tags.add("prototype");
+  if (text.includes("research")) tags.add("research");
+
+  return Array.from(tags);
+}
 
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [extras, setExtras] = useState<Resource[]>([]);
@@ -289,6 +348,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [sort, setSort] = useState<SortMode>("recent");
   const [view, setView] = useState<ViewMode>("grid");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -312,6 +373,35 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
     return "dark";
   });
+
+  const [iconMode, setIconModeState] = useState<"mono" | "color">(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const explicit = window.localStorage.getItem("aix-vault:icon-mode");
+        if (explicit === "mono" || explicit === "color") return explicit;
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.iconMode === "mono" || parsed.iconMode === "color") return parsed.iconMode;
+        }
+      } catch {
+        return "mono";
+      }
+    }
+    return "mono";
+  });
+
+  const setIconMode = useCallback((next: "mono" | "color") => {
+    setIconModeState(next);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("aix-vault:icon-mode", next);
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const cur = raw ? JSON.parse(raw) : {};
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, iconMode: next }));
+      } catch {}
+    }
+  }, []);
 
   // Role and Auth State
   const [role, setRole] = useState<UserRole>("user");
@@ -437,8 +527,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           const { data: resData, error } = await supabase
             .from("resources")
             .select(`
-              id, name, slug, description, url, domain, icon_url, type, category_id,
-              created_by, created_at, updated_at, is_public,
+              *,
               resource_tags ( tag_id )
             `)
             .order("created_at", { ascending: false });
@@ -476,6 +565,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               isPublic: r.is_public,
               tagIds: Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [],
               saveCount: 0,
+              pricing: (r as unknown as Record<string, unknown>).pricing === "Free" ? "Free" : "Freemium",
             }));
           }
         } catch {
@@ -553,6 +643,177 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshCollections = useCallback(async () => {
+    try {
+      const res = await fetch("/api/collections");
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.collections)) {
+          const dbCollections: Collection[] = json.collections.map(
+            (c: { id: string; name: string; slug: string; description: string | null; icon: string | null; created_by: string | null; created_at: string; updated_at: string }) => ({
+              id: c.id,
+              name: c.name,
+              slug: c.slug,
+              description: c.description ?? "",
+              icon: c.icon,
+              createdBy: c.created_by,
+              createdAt: c.created_at,
+              updatedAt: c.updated_at,
+            }),
+          );
+          // Merge: DB collections + any local-only collections not yet in DB
+          setCollections((localCols) => {
+            const dbIdSet = new Set(dbCollections.map((c) => c.id));
+            // Read deleted collection IDs from localStorage to filter them out
+            let deletedColIds: string[] = [];
+            try {
+              const raw = window.localStorage.getItem(STORAGE_KEY);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                deletedColIds = Array.isArray(parsed.deletedCollectionIds) ? parsed.deletedCollectionIds : [];
+              }
+            } catch {}
+            const deletedSet = new Set(deletedColIds);
+            const localOnly = localCols.filter((c) => !dbIdSet.has(c.id) && !deletedSet.has(c.id));
+            const fromDb = dbCollections.filter((c) => !deletedSet.has(c.id));
+            return [...fromDb, ...localOnly];
+          });
+        }
+        if (Array.isArray(json.collectionResources)) {
+          const dbCollRes: CollectionResource[] = json.collectionResources.map(
+            (cr: { collection_id: string; resource_id: string; created_at: string }) => ({
+              collectionId: cr.collection_id,
+              resourceId: cr.resource_id,
+              createdAt: cr.created_at,
+            }),
+          );
+          // Merge: DB collection_resources + any local-only links
+          setCollectionResources((localCR) => {
+            const dbKeySet = new Set(dbCollRes.map((cr) => `${cr.collectionId}::${cr.resourceId}`));
+            const localOnly = localCR.filter(
+              (cr) => !dbKeySet.has(`${cr.collectionId}::${cr.resourceId}`),
+            );
+            return [...dbCollRes, ...localOnly];
+          });
+        }
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }, []);
+
+  const refreshCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.categories) && json.categories.length > 0) {
+          const dbCats: Category[] = json.categories.map(
+            (c: { id: string; name: string; slug: string; description: string | null; parent_id: string | null; icon: string | null; created_at: string }) => ({
+              id: c.id,
+              name: c.name,
+              slug: c.slug,
+              description: c.description ?? c.name,
+              icon: c.icon,
+              parentId: c.parent_id,
+              createdAt: c.created_at,
+            }),
+          );
+          // Register DB categories so taxonomy helpers know about them
+          for (const cat of dbCats) {
+            registerCategory(cat);
+          }
+          // Merge: local taxonomy defaults + DB categories + localStorage custom categories
+          setCategoriesState((prev) => {
+            // Read deleted category IDs from localStorage
+            let deletedCatIds: string[] = [];
+            try {
+              const raw = window.localStorage.getItem(STORAGE_KEY);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                deletedCatIds = Array.isArray(parsed.deletedCategoryIds) ? parsed.deletedCategoryIds : [];
+              }
+            } catch {}
+            const deletedSet = new Set(deletedCatIds);
+            // Start with existing local categories
+            const merged = new Map<string, Category>();
+            for (const c of prev) {
+              if (!deletedSet.has(c.id)) merged.set(c.id, c);
+            }
+            // Overlay DB categories (they take precedence)
+            for (const c of dbCats) {
+              if (!deletedSet.has(c.id)) merged.set(c.id, c);
+            }
+            return Array.from(merged.values());
+          });
+        }
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }, []);
+
+  const refreshResourceTypes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/resource-types");
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.resourceTypes) && json.resourceTypes.length > 0) {
+          const dbTypes: ResourceType[] = json.resourceTypes.map(
+            (t: { id: string; name: string; slug: string }) => ({
+              id: t.id,
+              name: t.name,
+              slug: t.slug,
+            }),
+          );
+          for (const t of dbTypes) {
+            registerResourceType(t);
+          }
+          setResourceTypesState((prev) => {
+            let deletedTypeIds: string[] = [];
+            try {
+              const raw = window.localStorage.getItem(STORAGE_KEY);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                deletedTypeIds = Array.isArray(parsed.deletedResourceTypeIds) ? parsed.deletedResourceTypeIds : [];
+              }
+            } catch {}
+            const deletedSet = new Set(deletedTypeIds);
+            const merged = new Map<string, ResourceType>();
+            for (const t of prev) {
+              if (!deletedSet.has(t.id) && !deletedSet.has(t.slug)) merged.set(t.slug, t);
+            }
+            for (const t of dbTypes) {
+              if (!deletedSet.has(t.id) && !deletedSet.has(t.slug)) merged.set(t.slug, t);
+            }
+            return Array.from(merged.values());
+          });
+        }
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }, []);
+
+  const refreshSavedIds = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/saved?userId=${encodeURIComponent(currentUser.id)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.savedIds)) {
+          setSavedIds((localSaved) => {
+            const dbSet = new Set(json.savedIds as string[]);
+            const localOnly = localSaved.filter((id) => !dbSet.has(id));
+            return [...json.savedIds, ...localOnly];
+          });
+        }
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }, [currentUser]);
+
   const broadcastSync = useCallback(() => {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
       try {
@@ -565,9 +826,13 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Hydrate resources, listen to cross-tab BroadcastChannel & Supabase Realtime
+  // Hydrate all data & listen to cross-tab BroadcastChannel & Supabase Realtime
   useEffect(() => {
     void refreshResources();
+    void refreshCollections();
+    void refreshCategories();
+    void refreshResourceTypes();
+    void refreshSavedIds();
 
     let bc: BroadcastChannel | null = null;
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -575,12 +840,15 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       bc.onmessage = (event) => {
         if (event.data?.type === "SYNC_RESOURCES") {
           void refreshResources();
+          void refreshCollections();
+          void refreshCategories();
+          void refreshResourceTypes();
+          void refreshSavedIds();
           try {
             const raw = window.localStorage.getItem(STORAGE_KEY);
             if (raw) {
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed.extras)) setExtras(parsed.extras);
-              if (Array.isArray(parsed.collections)) setCollections(parsed.collections);
             }
           } catch {
             // ignore
@@ -594,8 +862,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed.extras)) setExtras(parsed.extras);
-          if (Array.isArray(parsed.collections)) setCollections(parsed.collections);
           void refreshResources();
+          void refreshCollections();
         } catch {
           // ignore
         }
@@ -607,12 +875,47 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     let channel: ReturnType<NonNullable<ReturnType<typeof getSupabaseClient>>["channel"]> | null = null;
     if (supabase) {
       channel = supabase
-        .channel("vault-resources-channel")
+        .channel("vault-all-changes")
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "resources" },
           () => {
             void refreshResources();
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "collections" },
+          () => {
+            void refreshCollections();
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "collection_resources" },
+          () => {
+            void refreshCollections();
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "categories" },
+          () => {
+            void refreshCategories();
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "resource_types" },
+          () => {
+            void refreshResourceTypes();
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "saved_resources" },
+          () => {
+            void refreshSavedIds();
           },
         )
         .subscribe((status) => {
@@ -629,7 +932,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         supabase.removeChannel(channel);
       }
     };
-  }, [refreshResources]);
+  }, [refreshResources, refreshCollections, refreshCategories, refreshResourceTypes, refreshSavedIds]);
 
 
   const [page, setPage] = useState(1);
@@ -836,6 +1139,12 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && (isSelectMode || selectedResourceIds.length > 0)) {
+        setIsSelectMode(false);
+        setSelectedResourceIds([]);
+        return;
+      }
+
       const isCmdK =
         (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
       const isSlash =
@@ -889,7 +1198,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isAdmin, addOpen, commandOpen, selectedId, authModalOpen]);
+  }, [isAdmin, addOpen, commandOpen, selectedId, authModalOpen, isSelectMode, selectedResourceIds]);
 
   useEffect(() => {
     if (!toast) return;
@@ -919,6 +1228,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     const merged = [...pureExtras, ...fromBase];
     return merged.map((resource) => ({
       ...resource,
+      tagIds: enrichResourceTags(resource),
       saveCount: saveCounts[resource.id] ?? resource.saveCount,
     }));
   }, [deletedIds, extras, remoteResources, saveCounts]);
@@ -1015,6 +1325,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
     setRole("user");
     setCurrentUser(null);
+    setIsSelectMode(false);
+    setSelectedResourceIds([]);
     setToast("Switched to Viewer profile.");
   }, []);
 
@@ -1085,6 +1397,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             url,
             categoryId: data.categoryId,
             type: data.type,
+            pricing: data.pricing ?? "Freemium",
             tags: finalTags,
             collectionId: data.collectionId || undefined,
             createdBy: currentUser?.id || undefined,
@@ -1268,6 +1581,138 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     [isAdmin],
   );
 
+  const setSelectMode = useCallback((active: boolean) => {
+    setIsSelectMode(active);
+    if (!active) {
+      setSelectedResourceIds([]);
+    }
+  }, []);
+
+  const toggleSelectResource = useCallback((id: string) => {
+    setSelectedResourceIds((prev) => {
+      const exists = prev.includes(id);
+      const next = exists ? prev.filter((item) => item !== id) : [...prev, id];
+      if (!exists) {
+        setIsSelectMode(true);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectResources = useCallback((ids: string[]) => {
+    setSelectedResourceIds((prev) => Array.from(new Set([...prev, ...ids])));
+    setIsSelectMode(true);
+  }, []);
+
+  const deselectResources = useCallback((ids: string[]) => {
+    const set = new Set(ids);
+    setSelectedResourceIds((prev) => prev.filter((id) => !set.has(id)));
+  }, []);
+
+  const selectAllVisible = useCallback((ids?: string[]) => {
+    if (ids && ids.length > 0) {
+      setSelectedResourceIds(ids);
+      setIsSelectMode(true);
+    }
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedResourceIds([]);
+    setIsSelectMode(false);
+  }, []);
+
+  const addResourcesToCollection = useCallback(
+    (resourceIds: string[], collectionId: string) => {
+      if (!isAdmin) {
+        setToast("Admin permission required to manage folders.");
+        return;
+      }
+      if (!resourceIds.length || !collectionId) return;
+
+      const targetCol = collections.find((c) => c.id === collectionId);
+      const colName = targetCol ? targetCol.name : "folder";
+
+      setCollectionResources((current) => {
+        const existingSet = new Set(
+          current
+            .filter((item) => item.collectionId === collectionId)
+            .map((item) => item.resourceId),
+        );
+        const newItems: CollectionResource[] = [];
+        for (const rId of resourceIds) {
+          if (!existingSet.has(rId)) {
+            newItems.push({
+              collectionId,
+              resourceId: rId,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        if (newItems.length === 0) {
+          setToast(`Selected items are already in "${colName}".`);
+          return current;
+        }
+
+        setToast(`Added ${newItems.length} resource${newItems.length === 1 ? "" : "s"} to "${colName}".`);
+
+        fetch("/api/collections", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "add_resources",
+            resourceIds: newItems.map((item) => item.resourceId),
+            collectionId,
+          }),
+        }).catch((e) => console.warn("Could not batch add resources to collection:", e));
+
+        return [...newItems, ...current];
+      });
+
+      setSelectedResourceIds([]);
+      setIsSelectMode(false);
+    },
+    [isAdmin, collections],
+  );
+
+  const removeResourcesFromCollection = useCallback(
+    (resourceIds: string[], collectionId: string) => {
+      if (!isAdmin) {
+        setToast("Admin permission required to manage folders.");
+        return;
+      }
+      if (!resourceIds.length || !collectionId) return;
+
+      const targetCol = collections.find((c) => c.id === collectionId);
+      const colName = targetCol ? targetCol.name : "folder";
+
+      setCollectionResources((current) => {
+        const set = new Set(resourceIds);
+        const remaining = current.filter(
+          (item) => !(item.collectionId === collectionId && set.has(item.resourceId)),
+        );
+        const removedCount = current.length - remaining.length;
+        if (removedCount > 0) {
+          setToast(`Removed ${removedCount} resource${removedCount === 1 ? "" : "s"} from "${colName}".`);
+          fetch("/api/collections", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "remove_resources",
+              resourceIds,
+              collectionId,
+            }),
+          }).catch((e) => console.warn("Could not batch remove resources from collection:", e));
+        }
+        return remaining;
+      });
+
+      setSelectedResourceIds([]);
+      setIsSelectMode(false);
+    },
+    [isAdmin, collections],
+  );
+
   const addCategory = useCallback(
     (name: string, parentId?: string) => {
       if (!isAdmin) {
@@ -1395,6 +1840,12 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         } catch {}
       }
 
+      fetch("/api/resource-types", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newType),
+      }).catch((e) => console.warn("Could not sync resource type:", e));
+
       setToast(`Type "${trimmed}" added.`);
       broadcastSync();
       return newType;
@@ -1427,6 +1878,10 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           );
         } catch {}
       }
+
+      fetch(`/api/resource-types?id=${encodeURIComponent(idOrSlug)}`, {
+        method: "DELETE",
+      }).catch((e) => console.warn("Could not delete resource type:", e));
 
       setToast("Tool type deleted.");
       broadcastSync();
@@ -1482,6 +1937,26 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, [extras, refreshResources]);
 
+  const availableResourceTypes = useMemo(() => {
+    const knownSlugs = new Set(resourceTypes.map((t) => t.slug));
+    const dynamicExtraTypes: ResourceType[] = [];
+    for (const r of resources) {
+      if (r.type && !knownSlugs.has(r.type)) {
+        knownSlugs.add(r.type);
+        const formattedName = r.type
+          .split("-")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+        dynamicExtraTypes.push({
+          id: r.type,
+          name: formattedName,
+          slug: r.type,
+        });
+      }
+    }
+    return [...resourceTypes, ...dynamicExtraTypes].sort((a, b) => a.name.localeCompare(b.name));
+  }, [resourceTypes, resources]);
+
   const value: VaultContextValue = {
     resources,
     isLoading,
@@ -1504,13 +1979,17 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     commandOpen,
     authModalOpen,
     toast,
+    setToast,
     theme,
+    iconMode,
     role,
     isAdmin,
     currentUser,
     result,
     selected,
     setNavigation: (next) => {
+      setSelectedResourceIds([]);
+      setIsSelectMode(false);
       setNavigation((current) => {
         if (JSON.stringify(next) !== JSON.stringify(current)) {
           const isSameFolder =
@@ -1531,6 +2010,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       setSidebarOpen(false);
     },
     goBack: () => {
+      setSelectedResourceIds([]);
+      setIsSelectMode(false);
       if (navHistory.length > 0) {
         const nextHistory = [...navHistory];
         let prev = nextHistory.pop();
@@ -1569,6 +2050,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     setCommandOpen,
     setAuthModalOpen,
     setTheme,
+    setIconMode,
     loginAsAdmin,
     logout,
     saveResource: (id) => {
@@ -1579,6 +2061,20 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           [id]: Math.max(0, (counts[id] ?? 0) + (exists ? -1 : 1)),
         }));
         setToast(exists ? "Removed from Saved." : "Saved.");
+
+        // Sync to Supabase if user is authenticated
+        if (currentUser) {
+          fetch("/api/saved", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: currentUser.id,
+              resourceId: id,
+              action: exists ? "unsave" : "save",
+            }),
+          }).catch(() => {});
+        }
+
         return exists ? current.filter((item) => item !== id) : [...current, id];
       });
     },
@@ -1603,6 +2099,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         ];
       });
     },
+    addResourcesToCollection,
+    removeResourcesFromCollection,
+    isSelectMode,
+    selectedResourceIds,
+    setSelectMode,
+    toggleSelectResource,
+    selectResources,
+    deselectResources,
+    selectAllVisible,
+    clearSelection,
     createCollection,
     renameCollection,
     deleteCollection,
@@ -1611,7 +2117,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     deleteResource,
     collectionResourceIds,
     categories,
-    resourceTypes,
+    resourceTypes: availableResourceTypes,
     addCategory,
     deleteCategory,
     addResourceType,

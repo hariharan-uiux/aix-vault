@@ -145,7 +145,7 @@ export function SearchCommand() {
                     role="option"
                     aria-selected={isSelected}
                     className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left transition-colors cursor-pointer ${
-                      isSelected ? "bg-subtle-background" : "hover:bg-subtle-background/60"
+                      isSelected ? "bg-orange-500/10 dark:bg-orange-400/15" : "hover:bg-subtle-background/60"
                     }`}
                     onMouseEnter={() => setActive(index)}
                     onClick={() => {

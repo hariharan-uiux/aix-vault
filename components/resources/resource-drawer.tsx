@@ -202,7 +202,8 @@ export function ResourceDrawer() {
               domain: selected.domain,
               iconUrl: selected.iconUrl,
             }}
-            size={48}
+            size={56}
+            grayscale={false}
           />
         </div>
 

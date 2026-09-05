@@ -111,7 +111,7 @@ export async function POST(request: Request) {
           }
         }
 
-        const row = {
+        const row: Record<string, unknown> = {
           id: targetId,
           name: item.name,
           slug,
@@ -120,15 +120,23 @@ export async function POST(request: Request) {
           domain,
           icon_url: item.iconUrl || null,
           type: item.type || "tool",
+          pricing: item.pricing || "Freemium",
           category_id: categoryId,
           created_by: item.createdBy || null,
           is_public: item.isPublic ?? true,
           updated_at: now,
         };
 
-        const { error: upsertErr } = await supabase
+        let { error: upsertErr } = await supabase
           .from("resources")
           .upsert(row, { onConflict: "id" });
+
+        // If pricing column doesn't exist yet, retry without pricing
+        if (upsertErr && (upsertErr.message.includes("pricing") || upsertErr.code === "42703")) {
+          delete row.pricing;
+          const retry = await supabase.from("resources").upsert(row, { onConflict: "id" });
+          upsertErr = retry.error;
+        }
 
         if (upsertErr) {
           console.error(`[api/resources/sync] Failed for ${item.name}:`, upsertErr);

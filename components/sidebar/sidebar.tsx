@@ -4,6 +4,7 @@ import { useVault } from "@/lib/vault/store";
 import { cn, faviconUrl } from "@/lib/utils";
 import { Bookmark, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 function MiniAppIcon({
   name,
@@ -273,10 +274,10 @@ function RealDarkFolder({
       {count > 0 && (
         <span
           className={cn(
-            "absolute -top-1 -right-1 z-30 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-mono font-semibold border bg-white text-zinc-900 border-black/15 transition-all duration-300",
+            "absolute -top-1 -right-1 z-30 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-mono font-semibold border transition-all duration-300",
             active
-              ? "border-black/40 scale-105"
-              : "group-hover:scale-110 group-hover:border-black/30",
+              ? "bg-orange-500 text-white border-orange-500/40 shadow-xs scale-105"
+              : "bg-white text-zinc-900 border-black/15 group-hover:scale-110 group-hover:border-black/30",
           )}
         >
           {count}
@@ -383,6 +384,7 @@ export function Sidebar() {
   const barRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -395,12 +397,32 @@ export function Sidebar() {
   } | null>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (!sidebarOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsAdding(false);
       setNewName("");
       return;
     }
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (barRef.current && barRef.current.contains(target)) {
+        return;
+      }
+      // Ignore clicks on dock collections button or context menus to avoid toggle conflicts
+      if (
+        target instanceof Element &&
+        (target.closest("[aria-label*='collections' i]") ||
+          target.closest("[data-context-menu]"))
+      ) {
+        return;
+      }
+      setSidebarOpen(false);
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         if (contextMenu) {
@@ -420,8 +442,13 @@ export function Sidebar() {
         setSidebarOpen(false);
       }
     };
+
+    document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [sidebarOpen, setSidebarOpen, isAdding, contextMenu, editingFolderId]);
 
 
@@ -468,25 +495,17 @@ export function Sidebar() {
     setContextMenu(null);
   };
 
-  return (
-    <>
-      {/* Backdrop overlay for outside click */}
-      <div
-        className={cn(
-          "fixed inset-0 z-30 bg-black/25 dark:bg-black/50 backdrop-blur-[2px] transition-all duration-200",
-          sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
-        )}
-        onClick={() => setSidebarOpen(false)}
-        aria-hidden="true"
-      />
+  if (!mounted) return null;
 
+  return createPortal(
+    <>
       {/* Floating Folders Bar / Dock with Frosted Glass Translucency */}
       <div
         ref={barRef}
         role="dialog"
         aria-label="Collections and Saved Navigation"
         className={cn(
-          "fixed left-1/2 z-40 w-[calc(100vw-1.5rem)] max-w-2xl sm:max-w-3xl md:max-w-4xl -translate-x-1/2 rounded-2xl border border-border/80 dark:border-white/10 bg-background/85 dark:bg-background/85 backdrop-blur-2xl p-3 sm:p-4 shadow-2xl shadow-black/15 dark:shadow-black/60 transition-all duration-200 ease-out",
+          "fixed left-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-2xl sm:max-w-3xl md:max-w-4xl -translate-x-1/2 rounded-3xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup backdrop-blur-2xl backdrop-saturate-200 bg-background/65 dark:bg-background/55 p-3 sm:p-4 shadow-2xl shadow-black/25 dark:shadow-black/70 transition-all duration-200 ease-out",
           // Open from bottom (above the bottom dock) on both mobile & desktop
           "top-auto bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]",
           sidebarOpen
@@ -632,14 +651,14 @@ export function Sidebar() {
                       className={cn(
                         "text-[12px] font-medium leading-tight line-clamp-2 max-w-full transition-all duration-300",
                         active
-                          ? "text-foreground font-semibold"
+                          ? "text-orange-600 dark:text-orange-400 font-semibold"
                           : "text-muted-foreground group-hover:text-foreground group-hover:translate-y-0.5",
                       )}
                     >
                       {collection.name}
                     </span>
                     {active && (
-                      <span className="size-1 rounded-full bg-foreground transition-all" />
+                      <span className="size-1 rounded-full bg-orange-500 transition-all" />
                     )}
                   </button>
                 )}
@@ -741,7 +760,7 @@ export function Sidebar() {
 
           <div
             style={{ top: contextMenu.y, left: contextMenu.x }}
-            className="fixed z-50 min-w-[150px] max-w-[min(calc(100vw-24px),180px)] overflow-hidden rounded-xl border border-border/80 bg-background/95 backdrop-blur-xl p-1 shadow-[0_12px_36px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-50 min-w-[150px] max-w-[min(calc(100vw-24px),180px)] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-1 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-in fade-in zoom-in-95 duration-100"
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
@@ -782,6 +801,7 @@ export function Sidebar() {
           </div>
         </>
       )}
-    </>
+    </>,
+    document.body,
   );
 }

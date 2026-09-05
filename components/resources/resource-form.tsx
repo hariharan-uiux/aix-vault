@@ -229,7 +229,7 @@ export function ResourceForm() {
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Brief summary of the tool or resource"
             rows={3}
-            className="w-full rounded-2xl border border-border bg-subtle-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-subtle-foreground focus:bg-background focus:outline-none focus:ring-1 focus:ring-foreground/20 resize-none transition-colors"
+            className="w-full rounded-2xl border border-border bg-subtle-background/50 px-3.5 py-2.5 text-[13px] text-foreground placeholder:text-subtle-foreground focus:bg-background outline-none focus:outline-none focus:border-foreground/50 resize-none transition-colors"
           />
         </label>
 
@@ -347,7 +347,7 @@ export function ResourceForm() {
                   className={cn(
                     "rounded-full border px-2.5 py-0.5 text-[11.5px] font-medium transition-colors cursor-pointer",
                     active
-                      ? "border-foreground bg-foreground text-background"
+                      ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium"
                       : "border-border bg-subtle-background/50 text-muted-foreground hover:bg-subtle-background hover:text-foreground",
                   )}
                 >

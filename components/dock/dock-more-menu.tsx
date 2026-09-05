@@ -10,11 +10,9 @@ import {
   Check,
   Folder,
   FolderOpen,
-  Grid2x2,
-  LayoutList,
   MoreHorizontal,
-  Rows3,
   SlidersHorizontal,
+  SquareCheck,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -29,8 +27,11 @@ export function DockMoreMenu() {
     resourceTypes,
     sort,
     setSort,
-    view,
-    setView,
+    isAdmin,
+    isSelectMode,
+    setSelectMode,
+    clearSelection,
+    selectedResourceIds,
   } = useVault();
 
   const [open, setOpen] = useState(false);
@@ -131,7 +132,7 @@ export function DockMoreMenu() {
           >
             <MoreHorizontal size={16} />
             {hasActiveState && (
-              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-foreground" />
+              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1 ring-background" />
             )}
           </button>
         </Tooltip>
@@ -150,57 +151,8 @@ export function DockMoreMenu() {
             }}
             className="fixed z-50 max-sm:left-1/2 max-sm:right-auto sm:left-auto w-[min(calc(100vw-24px),21rem)] rounded-3xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-3 animate-popup-from-below"
           >
-            {/* Grid & View Layout Customization */}
-            <div className="pb-2.5 px-0.5">
-              <div className="flex items-center justify-between mb-1.5 px-1.5">
-                <span className="text-[12px] font-medium text-muted-foreground">Grid & Layout</span>
-                <span className="text-[11.5px] text-muted-foreground capitalize font-mono">{view} view</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-1 border border-black/[0.06] dark:border-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => setView("grid")}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 py-2 rounded-full text-[12.5px] font-medium transition-all cursor-pointer select-none",
-                    view === "grid"
-                      ? "bg-background/90 dark:bg-neutral-800/90 text-foreground shadow-xs font-semibold border border-black/[0.08] dark:border-white/[0.14]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                  )}
-                >
-                  <Grid2x2 size={15} />
-                  <span>Grid</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("list")}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 py-2 rounded-full text-[12.5px] font-medium transition-all cursor-pointer select-none",
-                    view === "list"
-                      ? "bg-background/90 dark:bg-neutral-800/90 text-foreground shadow-xs font-semibold border border-black/[0.08] dark:border-white/[0.14]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                  )}
-                >
-                  <LayoutList size={15} />
-                  <span>List</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("compact")}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 py-2 rounded-full text-[12.5px] font-medium transition-all cursor-pointer select-none",
-                    view === "compact"
-                      ? "bg-background/90 dark:bg-neutral-800/90 text-foreground shadow-xs font-semibold border border-black/[0.08] dark:border-white/[0.14]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
-                  )}
-                >
-                  <Rows3 size={15} />
-                  <span>Compact</span>
-                </button>
-              </div>
-            </div>
-
             {/* Action Icons Row (Folders, Filter, Sort) */}
-            <div className="pt-2 border-t border-black/[0.08] dark:border-white/[0.1]">
+            <div>
               <div className="flex items-center gap-1.5 rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-1 border border-black/[0.06] dark:border-white/[0.08]">
                 {/* 1. Folder Icon Button */}
                 <button
@@ -210,16 +162,22 @@ export function DockMoreMenu() {
                   }}
                   className={cn(
                     "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
-                    sidebarOpen || isNavActive
-                      ? "bg-background/90 dark:bg-neutral-800/90 text-foreground shadow-xs font-semibold border border-black/[0.08] dark:border-white/[0.14]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                    isNavActive
+                      ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
+                      : sidebarOpen
+                        ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground font-semibold border"
+                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
                   )}
                   aria-label={sidebarOpen ? "Close collections" : "Open collections"}
                 >
-                  {sidebarOpen ? <FolderOpen size={16} /> : <Folder size={16} />}
+                  {sidebarOpen ? (
+                    <FolderOpen size={16} className={isNavActive ? "text-orange-600 dark:text-orange-400" : ""} />
+                  ) : (
+                    <Folder size={16} className={isNavActive ? "text-orange-600 dark:text-orange-400" : ""} />
+                  )}
                   <span>Folders</span>
                   {isNavActive && (
-                    <span className="size-1.5 rounded-full bg-foreground" />
+                    <span className="size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1 ring-background" />
                   )}
                 </button>
 
@@ -231,16 +189,18 @@ export function DockMoreMenu() {
                   }}
                   className={cn(
                     "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
-                    activeTab === "filter" || activeFilterCount > 0
-                      ? "bg-background/90 dark:bg-neutral-800/90 text-foreground shadow-xs font-semibold border border-black/[0.08] dark:border-white/[0.14]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                    activeFilterCount > 0
+                      ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
+                      : activeTab === "filter"
+                        ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground font-semibold border"
+                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
                   )}
                   aria-label="Filter resources"
                 >
                   <SlidersHorizontal size={16} />
                   <span>Filter</span>
                   {activeFilterCount > 0 && (
-                    <span className="flex size-4 items-center justify-center rounded-full bg-foreground text-[9px] font-semibold text-background">
+                    <span className="flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-semibold text-white dark:bg-orange-500">
                       {activeFilterCount}
                     </span>
                   )}
@@ -254,15 +214,50 @@ export function DockMoreMenu() {
                   }}
                   className={cn(
                     "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
-                    activeTab === "sort"
-                      ? "bg-background/90 dark:bg-neutral-800/90 text-foreground shadow-xs font-semibold border border-black/[0.08] dark:border-white/[0.14]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                    sort !== "recent"
+                      ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
+                      : activeTab === "sort"
+                        ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground font-semibold border"
+                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
                   )}
                   aria-label={`Sort: ${currentSortLabel}`}
                 >
                   <ArrowUpDown size={16} />
                   <span>Sort</span>
+                  {sort !== "recent" && (
+                    <span className="size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-1 ring-background" />
+                  )}
                 </button>
+
+                {/* 4. Select Button (Admin Only) */}
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isSelectMode) {
+                        clearSelection();
+                      } else {
+                        setSelectMode(true);
+                      }
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "flex-1 flex h-9.5 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-medium transition-all cursor-pointer select-none",
+                      isSelectMode || selectedResourceIds.length > 0
+                        ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs font-semibold border"
+                        : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.08]",
+                    )}
+                    aria-label="Select resources"
+                  >
+                    <SquareCheck size={16} />
+                    <span>Select</span>
+                    {selectedResourceIds.length > 0 && (
+                      <span className="flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-semibold text-white">
+                        {selectedResourceIds.length}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -279,7 +274,12 @@ export function DockMoreMenu() {
                     onChange={(e) =>
                       setFilters({ ...filters, type: e.target.value || null })
                     }
-                    className="h-9 w-full rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-background/80 px-3.5 text-[12.5px] text-foreground focus:outline-none"
+                    className={cn(
+                      "h-9 w-full rounded-full border px-3.5 text-[12.5px] focus:outline-none transition-colors",
+                      filters.type
+                        ? "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 font-medium"
+                        : "border-black/[0.08] dark:border-white/[0.12] bg-background/80 text-foreground",
+                    )}
                   >
                     <option value="">Any Type</option>
                     {resourceTypes.map((type) => (
@@ -297,7 +297,7 @@ export function DockMoreMenu() {
                       type="checkbox"
                       checked={filters.free}
                       onChange={(e) => setFilters({ ...filters, free: e.target.checked })}
-                      className="rounded border-border"
+                      className="rounded border-border accent-orange-500 dark:accent-orange-500 cursor-pointer"
                     />
                     <span>Free</span>
                   </label>
@@ -308,7 +308,7 @@ export function DockMoreMenu() {
                       onChange={(e) =>
                         setFilters({ ...filters, openSource: e.target.checked })
                       }
-                      className="rounded border-border"
+                      className="rounded border-border accent-orange-500 dark:accent-orange-500 cursor-pointer"
                     />
                     <span>Open Source</span>
                   </label>
@@ -337,7 +337,7 @@ export function DockMoreMenu() {
                           className={cn(
                             "rounded-full border px-2 py-0.5 text-[11.5px] transition-colors cursor-pointer",
                             active
-                              ? "border-foreground bg-foreground text-background font-medium"
+                              ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium shadow-2xs"
                               : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.1] hover:text-foreground",
                           )}
                         >
@@ -361,7 +361,7 @@ export function DockMoreMenu() {
                           tagIds: [],
                         })
                       }
-                      className="text-[11.5px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2"
+                      className="text-[11.5px] text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors cursor-pointer underline underline-offset-2"
                     >
                       Reset all filters
                     </button>
@@ -376,25 +376,36 @@ export function DockMoreMenu() {
                 <span className="mb-1 px-2 text-[11.5px] font-medium text-muted-foreground">
                   Sort resources by
                 </span>
-                {sorts.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setSort(item.id);
-                      setActiveTab("none");
-                    }}
-                    className={cn(
-                      "flex items-center justify-between rounded-full px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer",
-                      sort === item.id
-                        ? "bg-black/[0.06] dark:bg-white/[0.1] font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05] hover:text-foreground",
-                    )}
-                  >
-                    <span>{item.label}</span>
-                    {sort === item.id && <Check size={14} className="text-foreground" />}
-                  </button>
-                ))}
+                {sorts.map((item) => {
+                  const isSelected = sort === item.id;
+                  const isCustomSort = isSelected && item.id !== "recent";
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setSort(item.id);
+                        setActiveTab("none");
+                      }}
+                      className={cn(
+                        "flex items-center justify-between rounded-full px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer",
+                        isCustomSort
+                          ? "bg-orange-500/15 text-orange-600 dark:bg-orange-400/20 dark:text-orange-400 font-medium"
+                          : isSelected
+                            ? "bg-black/[0.04] dark:bg-white/[0.06] text-foreground font-medium"
+                            : "text-muted-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05] hover:text-foreground",
+                      )}
+                    >
+                      <span>{item.label}</span>
+                      {isSelected && (
+                        <Check
+                          size={14}
+                          className={isCustomSort ? "text-orange-600 dark:text-orange-400" : "text-foreground"}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>,

@@ -8,8 +8,11 @@
   --foreground: #111111;
   --muted-foreground: #6b6b6b;
   --subtle-foreground: #999999;
-  --border: #eaeaea;
+  --border: #f0f0f0;
   --subtle-background: #f7f7f7;
+  --secondary: #f97316;
+  --secondary-foreground: #ffffff;
+  --highlight: #f97316;
   --overlay: rgba(0, 0, 0, 0.25);
   --shadow: 0 12px 40px rgba(17, 17, 17, 0.08);
   --radius-sm: 8px;
@@ -24,8 +27,11 @@
   --foreground: #ededed;
   --muted-foreground: #888888;
   --subtle-foreground: #666666;
-  --border: #222222;
+  --border: #171717;
   --subtle-background: #141414;
+  --secondary: #fb923c;
+  --secondary-foreground: #000000;
+  --highlight: #fb923c;
   --overlay: rgba(0, 0, 0, 0.5);
   --shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
@@ -37,6 +43,9 @@
   --color-subtle-foreground: var(--subtle-foreground);
   --color-border: var(--border);
   --color-subtle-background: var(--subtle-background);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-highlight: var(--highlight);
   --font-sans: var(--font-geist-sans), Inter, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -139,6 +148,23 @@
   transform-origin: bottom center;
 }
 
+/* Grayscale icon by default, transition to full color on hover (disabled on touch devices) */
+@media (hover: hover) and (pointer: fine) {
+  .resource-icon-mono {
+    filter: grayscale(100%);
+    opacity: 0.88;
+    transition: filter 260ms cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .group:hover .resource-icon-mono,
+  .group:focus-within .resource-icon-mono,
+  .resource-icon-mono:hover {
+    filter: grayscale(0%);
+    opacity: 1;
+  }
+}
+
 
 /* Disable tooltips on mobile viewports and touch devices */
 @media (hover: none), (pointer: coarse), (max-width: 767px) {
@@ -200,6 +226,23 @@ input,
 select,
 textarea {
   font: inherit;
+  outline: none;
+}
+
+input,
+textarea,
+select {
+  outline: none !important;
+}
+
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 
 ::selection {
@@ -207,7 +250,7 @@ textarea {
   color: var(--background);
 }
 
-:focus-visible {
+:focus-visible:not(input):not(textarea):not(select) {
   outline: 2px solid var(--muted-foreground);
   outline-offset: 2px;
 }

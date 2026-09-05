@@ -64,7 +64,7 @@ export type SavedResource = {
 };
 
 export type ViewMode = "list" | "grid" | "compact";
-export type SortMode = "recent" | "name" | "saved";
+export type SortMode = "recent" | "name";
 
 export type Platform = "all" | "development" | "design";
 

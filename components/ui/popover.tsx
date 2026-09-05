@@ -27,11 +27,11 @@ export function Popover({
   triggerClassName,
   contentClassName,
 }: {
-  label: ReactNode;
+  label: ReactNode | ((props: { open: boolean }) => ReactNode);
   children: ReactNode;
   align?: "left" | "right" | "center";
   side?: "top" | "bottom";
-  triggerClassName?: string;
+  triggerClassName?: string | ((props: { open: boolean }) => string);
   contentClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -51,43 +51,53 @@ export function Popover({
     setMounted(true);
   }, []);
 
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+    const dockPill = triggerRef.current.closest(".frosted-dock") ?? triggerRef.current;
+    const dockRect = dockPill.getBoundingClientRect();
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+
+    if (side === "top") {
+      // Snug 6px gap directly above the dock
+      const bottom = Math.max(12, Math.round(window.innerHeight - dockRect.top + 6));
+      if (align === "center") {
+        // Centered on trigger button, clamped so 320px popover never clips off viewport edges
+        const center = Math.round(triggerRect.left + triggerRect.width / 2);
+        const halfWidth = 160;
+        const left = Math.max(
+          halfWidth + 12,
+          Math.min(window.innerWidth - halfWidth - 12, center),
+        );
+        setCoords({ bottom, left, isCenter: true });
+      } else if (align === "right") {
+        const right = Math.round(window.innerWidth - triggerRect.right);
+        setCoords({ bottom, right });
+      } else {
+        const left = Math.round(triggerRect.left);
+        setCoords({ bottom, left });
+      }
+    } else {
+      const top = Math.round(triggerRect.bottom + 8);
+      if (align === "right") {
+        const right = Math.round(window.innerWidth - triggerRect.right);
+        setCoords({ top, right });
+      } else if (align === "center") {
+        const center = Math.round(triggerRect.left + triggerRect.width / 2);
+        const halfWidth = 160;
+        const left = Math.max(
+          halfWidth + 12,
+          Math.min(window.innerWidth - halfWidth - 12, center),
+        );
+        setCoords({ top, left, isCenter: true });
+      } else {
+        const left = Math.round(triggerRect.left);
+        setCoords({ top, left });
+      }
+    }
+  };
+
   useEffect(() => {
     if (!open) return;
-
-    const updatePosition = () => {
-      if (!triggerRef.current) return;
-      const dockPill = triggerRef.current.closest(".frosted-dock") ?? triggerRef.current;
-      const dockRect = dockPill.getBoundingClientRect();
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-
-      if (side === "top") {
-        // Snug 6px gap directly above the dock
-        const bottom = Math.max(12, Math.round(window.innerHeight - dockRect.top + 6));
-        if (align === "center") {
-          // Exactly centered on the trigger button
-          const left = Math.round(triggerRect.left + triggerRect.width / 2);
-          setCoords({ bottom, left, isCenter: true });
-        } else if (align === "right") {
-          const right = Math.round(window.innerWidth - triggerRect.right);
-          setCoords({ bottom, right });
-        } else {
-          const left = Math.round(triggerRect.left);
-          setCoords({ bottom, left });
-        }
-      } else {
-        const top = Math.round(triggerRect.bottom + 8);
-        if (align === "right") {
-          const right = Math.round(window.innerWidth - triggerRect.right);
-          setCoords({ top, right });
-        } else if (align === "center") {
-          const left = Math.round(triggerRect.left + triggerRect.width / 2);
-          setCoords({ top, left, isCenter: true });
-        } else {
-          const left = Math.round(triggerRect.left);
-          setCoords({ top, left });
-        }
-      }
-    };
 
     updatePosition();
     window.addEventListener("resize", updatePosition);
@@ -101,7 +111,11 @@ export function Popover({
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (!triggerRef.current?.contains(target) && !contentRef.current?.contains(target)) {
+      if (
+        !triggerRef.current?.contains(target) &&
+        !contentRef.current?.contains(target) &&
+        !(target as Element).closest?.("[data-popover-child]")
+      ) {
         setOpen(false);
       }
     };
@@ -116,24 +130,33 @@ export function Popover({
     };
   }, []);
 
+  const toggle = () => {
+    if (!open) {
+      updatePosition();
+      setOpen(true);
+    } else {
+      setOpen(false);
+    }
+  };
+
   return (
     <PopoverContext.Provider value={{ close: () => setOpen(false) }}>
       <div className="relative inline-block" ref={triggerRef}>
         <button
           type="button"
           aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
+          onClick={toggle}
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] px-3 text-[13px] text-muted-foreground transition-all hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground cursor-pointer",
-            open && "border-black/[0.12] dark:border-white/[0.18] bg-black/[0.08] dark:bg-white/[0.12] text-foreground shadow-2xs",
-            triggerClassName,
+            open && !triggerClassName && "border-black/[0.12] dark:border-white/[0.18] bg-black/[0.08] dark:bg-white/[0.12] text-foreground shadow-2xs",
+            typeof triggerClassName === "function" ? triggerClassName({ open }) : triggerClassName,
           )}
         >
-          {label}
+          {typeof label === "function" ? label({ open }) : label}
         </button>
       </div>
 
-      {mounted && open &&
+      {mounted && open && coords &&
         createPortal(
           <div
             style={{

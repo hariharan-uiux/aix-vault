@@ -278,7 +278,7 @@ export function SearchableDropdown({
                     className={cn(
                       "group flex items-center justify-between w-full px-2.5 py-1.5 text-[12px] rounded-lg text-left transition-colors cursor-pointer select-none",
                       isSelected
-                        ? "text-foreground font-medium bg-subtle-background"
+                        ? "text-orange-600 dark:text-orange-400 font-medium bg-orange-500/10 dark:bg-orange-400/15"
                         : "text-muted-foreground hover:text-foreground",
                       isHighlighted && !isSelected && "bg-subtle-background/50",
                     )}
@@ -325,7 +325,7 @@ export function SearchableDropdown({
                         )
                       )}
                       {isSelected && !isDeleting && (
-                        <Check size={13} className="shrink-0 text-foreground ml-1" />
+                        <Check size={13} className="shrink-0 text-orange-600 dark:text-orange-400 ml-1" />
                       )}
                     </div>
                   </div>

@@ -12,6 +12,7 @@ type DbResourceRow = {
   domain: string;
   icon_url: string | null;
   type: Resource["type"];
+  pricing?: "Free" | "Freemium";
   category_id: string;
   created_by: string | null;
   created_at: string;
@@ -30,8 +31,7 @@ export async function GET() {
     const { data: resData, error } = await supabase
       .from("resources")
       .select(`
-        id, name, slug, description, url, domain, icon_url, type, category_id,
-        created_by, created_at, updated_at, is_public,
+        *,
         resource_tags ( tag_id )
       `)
       .order("created_at", { ascending: false });
@@ -50,6 +50,7 @@ export async function GET() {
       domain: r.domain,
       iconUrl: r.icon_url,
       type: r.type,
+      pricing: r.pricing === "Free" ? "Free" : "Freemium",
       categoryId: r.category_id,
       createdBy: r.created_by,
       createdAt: r.created_at,
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, name, description, url, categoryId, type, tags, collectionId, createdBy } = body;
+    const { id, name, description, url, categoryId, type, tags, collectionId, createdBy, pricing } = body;
 
     if (!name || !url || !categoryId || !type) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
@@ -160,20 +161,30 @@ export async function POST(request: Request) {
 
     if (targetId) {
       // Upsert/update existing resource
-      const { error: updateErr } = await supabase
+      const updateData: Record<string, unknown> = {
+        name,
+        slug,
+        description: description || "",
+        url: normalizedUrl,
+        domain,
+        type,
+        category_id: categoryId,
+        is_public: true,
+        updated_at: now,
+      };
+      if (pricing) updateData.pricing = pricing;
+
+      let { error: updateErr } = await supabase
         .from("resources")
-        .update({
-          name,
-          slug,
-          description: description || "",
-          url: normalizedUrl,
-          domain,
-          type,
-          category_id: categoryId,
-          is_public: true,
-          updated_at: now,
-        })
+        .update(updateData)
         .eq("id", targetId);
+
+      // If pricing column doesn't exist yet, retry without pricing
+      if (updateErr && (updateErr.message.includes("pricing") || updateErr.code === "42703")) {
+        delete updateData.pricing;
+        const retry = await supabase.from("resources").update(updateData).eq("id", targetId);
+        updateErr = retry.error;
+      }
 
       if (updateErr) {
         console.error("[api/resources POST -> update] Error:", updateErr);
@@ -204,6 +215,7 @@ export async function POST(request: Request) {
         createdAt: now,
         updatedAt: now,
         isPublic: true,
+        pricing: pricing === "Free" ? "Free" : "Freemium",
         tagIds: tags || [],
         saveCount: 0,
       };
@@ -212,7 +224,7 @@ export async function POST(request: Request) {
     }
 
     // Insert Resource
-    const { error: insErr } = await supabase.from("resources").insert({
+    const insertData: Record<string, unknown> = {
       id: resourceId,
       name,
       slug,
@@ -223,9 +235,19 @@ export async function POST(request: Request) {
       category_id: categoryId,
       created_by: createdBy || null,
       is_public: true,
+      pricing: pricing || "Freemium",
       created_at: now,
       updated_at: now,
-    });
+    };
+
+    let { error: insErr } = await supabase.from("resources").insert(insertData);
+
+    // If pricing column doesn't exist yet, retry without pricing
+    if (insErr && (insErr.message.includes("pricing") || insErr.code === "42703")) {
+      delete insertData.pricing;
+      const retry = await supabase.from("resources").insert(insertData);
+      insErr = retry.error;
+    }
 
     if (insErr) {
       console.error("[api/resources POST] Insert resource error:", insErr);
@@ -270,6 +292,7 @@ export async function POST(request: Request) {
       createdAt: now,
       updatedAt: now,
       isPublic: true,
+      pricing: pricing === "Free" ? "Free" : "Freemium",
       tagIds: tags || [],
       saveCount: 0,
     };
@@ -296,7 +319,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ ok: false, error: "Missing id or patch" }, { status: 400 });
     }
 
-    const updatePayload: Record<string, string | boolean> = {
+    const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 
@@ -311,16 +334,24 @@ export async function PATCH(request: Request) {
       updatePayload.domain = domainFromUrl(normalizedUrl);
     }
     if (patch.type) updatePayload.type = patch.type;
+    if (patch.pricing) updatePayload.pricing = patch.pricing;
     if (patch.categoryId) {
       await ensureCategory(supabase, patch.categoryId);
       updatePayload.category_id = patch.categoryId;
     }
     if (patch.isPublic !== undefined) updatePayload.is_public = patch.isPublic;
 
-    const { error: updateErr } = await supabase
+    let { error: updateErr } = await supabase
       .from("resources")
       .update(updatePayload)
       .eq("id", id);
+
+    // If pricing column doesn't exist yet, retry without pricing
+    if (updateErr && (updateErr.message.includes("pricing") || updateErr.code === "42703")) {
+      delete updatePayload.pricing;
+      const retry = await supabase.from("resources").update(updatePayload).eq("id", id);
+      updateErr = retry.error;
+    }
 
     if (updateErr) {
       console.error("[api/resources PATCH] Update error:", updateErr);

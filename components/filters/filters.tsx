@@ -8,7 +8,6 @@ import { useVault } from "@/lib/vault/store";
 import { cn } from "@/lib/utils";
 import type { SortMode, ViewMode } from "@/types";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   ArrowUpDown,
   Check,
@@ -119,7 +118,6 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
 export const sorts: { id: SortMode; label: string }[] = [
   { id: "recent", label: "Recently Added" },
   { id: "name", label: "Name A–Z" },
-  { id: "saved", label: "Most Saved" },
 ];
 
 function TypeSelectDropdown({
@@ -132,20 +130,9 @@ function TypeSelectDropdown({
   const { resourceTypes } = useVault();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [mounted, setMounted] = useState(false);
-  const [coords, setCoords] = useState<{
-    bottom: number;
-    left: number;
-    width: number;
-  } | null>(null);
 
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const options = useMemo(() => {
     return [
@@ -165,36 +152,12 @@ function TypeSelectDropdown({
     return options.filter((opt) => opt.name.toLowerCase().includes(q));
   }, [options, query]);
 
-  // Position calculation: opens snugly above the trigger button
-  useEffect(() => {
-    if (!open) return;
-    const updatePosition = () => {
-      if (!triggerRef.current) return;
-      const rect = triggerRef.current.getBoundingClientRect();
-      const bottom = Math.round(window.innerHeight - rect.top + 6);
-      const left = Math.round(rect.left);
-      const width = Math.round(rect.width);
-      setCoords({ bottom, left, width });
-    };
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition);
-    };
-  }, [open]);
-
-  // Click outside & Escape listeners
+  // Click outside container listener to collapse the dropdown
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        !triggerRef.current?.contains(target) &&
-        !dropdownRef.current?.contains(target)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(target)) {
         setOpen(false);
       }
     };
@@ -211,30 +174,33 @@ function TypeSelectDropdown({
     };
   }, [open]);
 
-  // Focus search input on open
+  // Reset query when closing and auto-focus without browser square focus box
   useEffect(() => {
     if (open) {
-      setQuery("");
       requestAnimationFrame(() => {
         searchInputRef.current?.focus();
       });
+    } else {
+      setQuery("");
     }
   }, [open]);
 
   return (
-    <>
+    <div ref={containerRef} className="relative w-full">
       <button
-        ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          "flex h-9 w-full items-center justify-between rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] px-3.5 text-[12.5px] text-foreground transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.08] cursor-pointer outline-none select-none",
-          open && "border-black/[0.16] dark:border-white/[0.2] bg-black/[0.06] dark:bg-white/[0.08]",
+          "flex h-9 w-full items-center justify-between rounded-full border px-3.5 text-[12.5px] transition-colors cursor-pointer outline-none select-none",
+          value
+            ? "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 font-medium"
+            : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] text-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.08]",
+          open && !value && "border-black/20 dark:border-white/20 bg-black/[0.06] dark:bg-white/[0.08]",
         )}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className="truncate">{currentLabel}</span>
+        <span className="truncate font-medium">{currentLabel}</span>
         <ChevronDown
           size={13}
           className={cn(
@@ -244,30 +210,32 @@ function TypeSelectDropdown({
         />
       </button>
 
-      {mounted && open && coords &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            style={{
-              position: "fixed",
-              bottom: `${coords.bottom}px`,
-              left: `${coords.left}px`,
-              width: `${coords.width}px`,
-              zIndex: 60,
-            }}
-            className="pointer-events-auto rounded-2xl border border-black/[0.08] dark:border-white/[0.14] bg-background/95 dark:bg-[#141519]/95 backdrop-blur-2xl p-1.5 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-in fade-in-0 zoom-in-95 duration-150"
-            role="listbox"
-          >
-            {/* Search filter input */}
-            <div className="relative flex items-center px-2.5 py-1.5 border-b border-black/[0.06] dark:border-white/[0.08] mb-1">
-              <Search size={12} className="shrink-0 text-muted-foreground mr-2" />
+      {open && (
+        <div
+          className="mt-1.5 w-full rounded-2xl border border-black/[0.08] dark:border-white/[0.14] bg-background/95 dark:bg-[#18191e]/95 backdrop-blur-xl p-1.5 shadow-xl shadow-black/20 dark:shadow-black/60 animate-in fade-in-0 zoom-in-95 duration-150"
+          role="listbox"
+        >
+          {/* Search filter input with smooth pill container and ZERO square box/outline */}
+          <div className="p-1 pb-1.5">
+            <div className="flex items-center gap-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] px-2.5 py-1.5 transition-colors focus-within:border-black/20 dark:focus-within:border-white/20">
+              <Search size={12} className="shrink-0 text-muted-foreground" />
               <input
                 ref={searchInputRef}
                 type="text"
+                name="type-search"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search types..."
-                className="w-full bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground outline-none border-none p-0 m-0"
+                style={{
+                  outline: "none",
+                  boxShadow: "none",
+                  border: "none",
+                }}
+                className="w-full bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 border-none p-0 m-0 shadow-none focus:shadow-none"
               />
               {query && (
                 <button
@@ -276,53 +244,66 @@ function TypeSelectDropdown({
                     setQuery("");
                     searchInputRef.current?.focus();
                   }}
-                  className="shrink-0 text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+                  className="shrink-0 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer outline-none focus:outline-none"
                   title="Clear"
                 >
                   <X size={11} />
                 </button>
               )}
             </div>
+          </div>
 
-            {/* Scrollable list of types */}
-            <div className="max-h-52 overflow-y-auto space-y-0.5 py-0.5 overscroll-contain pr-0.5 no-scrollbar">
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((opt) => {
-                  const isSelected = (value ?? "") === opt.slug;
-                  return (
-                    <button
-                      key={opt.slug}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => {
-                        onChange(opt.slug || null);
-                        setOpen(false);
-                      }}
-                      className={cn(
-                        "flex items-center justify-between w-full px-3 py-1.5 text-[12.5px] rounded-full text-left transition-colors cursor-pointer select-none",
-                        isSelected
-                          ? "bg-black/[0.06] dark:bg-white/[0.1] font-medium text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05]",
-                      )}
-                    >
-                      <span className="truncate">{opt.name}</span>
-                      {isSelected && (
-                        <Check size={13} className="shrink-0 text-foreground ml-2" />
-                      )}
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="py-3 text-center text-[11.5px] text-muted-foreground">
-                  No types found
-                </div>
-              )}
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
+          {/* Scrollable list of types */}
+          <div className="max-h-52 overflow-y-auto space-y-0.5 py-0.5 overscroll-contain pr-0.5 no-scrollbar">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt) => {
+                const isSelected = (value ?? "") === opt.slug;
+                const isRealType = Boolean(opt.slug);
+                const isSelectedRealType = isSelected && isRealType;
+
+                return (
+                  <button
+                    key={opt.slug || "any"}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      onChange(opt.slug || null);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "flex items-center justify-between w-full px-3 py-1.5 text-[12px] rounded-xl text-left transition-colors cursor-pointer select-none outline-none focus:outline-none",
+                      isSelectedRealType
+                        ? "bg-orange-500/15 font-semibold text-orange-600 dark:bg-orange-400/20 dark:text-orange-400"
+                        : isSelected
+                          ? "bg-black/[0.05] dark:bg-white/[0.08] font-medium text-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
+                    )}
+                  >
+                    <span className="truncate">{opt.name}</span>
+                    {isSelected && (
+                      <Check
+                        size={13}
+                        className={cn(
+                          "shrink-0 ml-2",
+                          isSelectedRealType
+                            ? "text-orange-600 dark:text-orange-400"
+                            : "text-foreground",
+                        )}
+                      />
+                    )}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="py-3 text-center text-[11.5px] text-muted-foreground">
+                No types found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -348,24 +329,38 @@ export function FilterPopover({
     <Popover
       side={side}
       align={align}
-      triggerClassName={cn(
-        iconOnly
-          ? "size-8 p-0 justify-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground"
-          : "rounded-full h-8 px-3 text-[12px] sm:text-[13px]",
-        activeCount > 0 && "text-foreground border-black/[0.12] dark:border-white/[0.18] bg-black/[0.08] dark:bg-white/[0.12] shadow-2xs",
-        triggerClassName,
-      )}
+      triggerClassName={({ open }) =>
+        cn(
+          iconOnly
+            ? "size-8 p-0 justify-center rounded-full border transition-all cursor-pointer"
+            : "rounded-full h-8 px-3 text-[12px] sm:text-[13px] border transition-all cursor-pointer",
+          activeCount > 0
+            ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
+            : open
+              ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
+              : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
+          triggerClassName,
+        )
+      }
       contentClassName="w-[min(calc(100vw-24px),19rem)] sm:w-80"
-      label={
-        iconOnly ? (
-          <Tooltip label={activeCount > 0 ? `Filters (${activeCount} active)` : "Filters"}>
+      label={({ open }) => {
+        const hasActive = activeCount > 0;
+        return iconOnly ? (
+          <Tooltip label={hasActive ? `Filters (${activeCount} active)` : "Filters"}>
             <span className="relative flex size-8 items-center justify-center">
               <SlidersHorizontal
                 size={14}
-                className={activeCount > 0 ? "text-foreground" : "text-muted-foreground"}
+                className={cn(
+                  "transition-colors",
+                  hasActive
+                    ? "text-orange-600 dark:text-orange-400"
+                    : open
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                )}
               />
-              {activeCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-foreground text-[9px] font-semibold text-background">
+              {hasActive && (
+                <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-semibold text-white">
                   {activeCount}
                 </span>
               )}
@@ -373,18 +368,22 @@ export function FilterPopover({
           </Tooltip>
         ) : (
           <>
-            <span className="hidden sm:inline">Filters</span>
-            <span className="sm:hidden">Filter</span>
-            {activeCount > 0 ? (
-              <Badge className="h-4 min-w-4 justify-center px-1 py-0 text-[10px]">
+            <span className={cn("hidden sm:inline", hasActive && "text-orange-600 dark:text-orange-400 font-medium")}>
+              Filters
+            </span>
+            <span className={cn("sm:hidden", hasActive && "text-orange-600 dark:text-orange-400 font-medium")}>
+              Filter
+            </span>
+            {hasActive ? (
+              <Badge className="h-4 min-w-4 justify-center px-1 py-0 text-[10px] bg-orange-500 text-white">
                 {activeCount}
               </Badge>
             ) : (
-              <ChevronDown size={12} />
+              <ChevronDown size={12} className={hasActive ? "text-orange-600 dark:text-orange-400" : ""} />
             )}
           </>
-        )
-      }
+        );
+      }}
     >
       <div className="space-y-3 text-[13px]">
         <div>
@@ -400,7 +399,7 @@ export function FilterPopover({
               type="checkbox"
               checked={filters.free}
               onChange={(event) => setFilters({ ...filters, free: event.target.checked })}
-              className="rounded border-border"
+              className="rounded border-border accent-orange-500 dark:accent-orange-500 cursor-pointer"
             />
             <span>Free</span>
           </label>
@@ -411,7 +410,7 @@ export function FilterPopover({
               onChange={(event) =>
                 setFilters({ ...filters, openSource: event.target.checked })
               }
-              className="rounded border-border"
+              className="rounded border-border accent-orange-500 dark:accent-orange-500 cursor-pointer"
             />
             <span>Open Source</span>
           </label>
@@ -436,7 +435,7 @@ export function FilterPopover({
                   className={cn(
                     "rounded-full border px-2.5 py-0.5 text-[11.5px] transition-colors cursor-pointer",
                     active
-                      ? "border-foreground bg-foreground text-background font-medium"
+                      ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium shadow-2xs"
                       : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.1] hover:text-foreground",
                   )}
                 >
@@ -458,7 +457,7 @@ export function FilterPopover({
                   tagIds: [],
                 })
               }
-              className="text-[11.5px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer underline underline-offset-2"
+              className="text-[11.5px] text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors cursor-pointer underline underline-offset-2"
             >
               Reset all filters
             </button>
@@ -478,25 +477,36 @@ export function SortMenuList({ className }: { className?: string } = {}) {
       <span className="mb-1 px-2.5 text-[11.5px] font-medium text-muted-foreground">
         Sort resources by
       </span>
-      {sorts.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          onClick={() => {
-            setSort(item.id);
-            popover.close();
-          }}
-          className={cn(
-            "flex items-center justify-between rounded-full px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer",
-            sort === item.id
-              ? "bg-black/[0.06] dark:bg-white/[0.1] font-medium text-foreground"
-              : "text-muted-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05] hover:text-foreground",
-          )}
-        >
-          <span>{item.label}</span>
-          {sort === item.id ? <Check size={14} className="text-foreground" /> : null}
-        </button>
-      ))}
+      {sorts.map((item) => {
+        const isSelected = sort === item.id;
+        const isCustomSort = isSelected && item.id !== "recent";
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              setSort(item.id);
+              popover.close();
+            }}
+            className={cn(
+              "flex items-center justify-between rounded-full px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer",
+              isCustomSort
+                ? "bg-orange-500/15 text-orange-600 dark:bg-orange-400/20 dark:text-orange-400 font-medium"
+                : isSelected
+                  ? "bg-black/[0.04] dark:bg-white/[0.06] text-foreground font-medium"
+                  : "text-muted-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05] hover:text-foreground",
+            )}
+          >
+            <span>{item.label}</span>
+            {isSelected && (
+              <Check
+                size={14}
+                className={isCustomSort ? "text-orange-600 dark:text-orange-400" : "text-foreground"}
+              />
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -514,31 +524,52 @@ export function SortMenu({
 } = {}) {
   const { sort } = useVault();
   const current = sorts.find((item) => item.id === sort)?.label ?? "Sort";
+  const isSorted = sort !== "recent";
 
   return (
     <Popover
       side={side}
       align={align}
-      triggerClassName={cn(
-        iconOnly
-          ? "size-8 p-0 justify-center rounded-full border border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground"
-          : "rounded-full h-8 px-3 text-[12px] sm:text-[13px]",
-        triggerClassName,
-      )}
-      label={
-        iconOnly ? (
+      triggerClassName={({ open }) =>
+        cn(
+          iconOnly
+            ? "size-8 p-0 justify-center rounded-full border transition-all cursor-pointer"
+            : "rounded-full h-8 px-3 text-[12px] sm:text-[13px] border transition-all cursor-pointer",
+          isSorted
+            ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
+            : open
+              ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
+              : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
+          triggerClassName,
+        )
+      }
+      label={({ open }) => {
+        return iconOnly ? (
           <Tooltip label={`Sort: ${current}`}>
-            <span className="flex size-8 items-center justify-center text-muted-foreground hover:text-foreground">
-              <ArrowUpDown size={14} />
+            <span className="relative flex size-8 items-center justify-center">
+              <ArrowUpDown
+                size={14}
+                className={cn(
+                  "transition-colors",
+                  isSorted
+                    ? "text-orange-600 dark:text-orange-400"
+                    : open
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                )}
+              />
+              {isSorted && (
+                <span className="absolute top-1 right-1 size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-2 ring-background" />
+              )}
             </span>
           </Tooltip>
         ) : (
           <>
-            <span className="hidden sm:inline">{current}</span>
-            <ChevronDown size={12} />
+            <span className={cn("hidden sm:inline", isSorted && "text-orange-600 dark:text-orange-400 font-medium")}>{current}</span>
+            <ChevronDown size={12} className={isSorted ? "text-orange-600 dark:text-orange-400" : ""} />
           </>
-        )
-      }
+        );
+      }}
     >
       <SortMenuList />
     </Popover>

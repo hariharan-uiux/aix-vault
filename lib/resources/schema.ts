@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const PAGE_SIZE = 40;
+export const PAGE_SIZE = 24;
 
 function isValidUrl(value: string) {
   try {

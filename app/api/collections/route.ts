@@ -45,6 +45,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    if (action === "add_resources") {
+      const { resourceIds } = body;
+      const ids: string[] = Array.isArray(resourceIds) ? resourceIds : (resourceId ? [resourceId] : []);
+      if (!ids.length || !collectionId) {
+        return NextResponse.json({ ok: false, error: "Missing resourceIds or collectionId" }, { status: 400 });
+      }
+      const rows = ids.map((rId) => ({
+        collection_id: collectionId,
+        resource_id: rId,
+      }));
+      const { error } = await supabase.from("collection_resources").upsert(rows);
+      if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+      return NextResponse.json({ ok: true, count: ids.length });
+    }
+
     if (!collection?.id || !collection?.name) {
       return NextResponse.json({ ok: false, error: "Missing collection details" }, { status: 400 });
     }
@@ -72,10 +87,32 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    let bodyData: { action?: string; collectionId?: string; resourceId?: string; resourceIds?: string[] } | null = null;
+    try {
+      bodyData = await request.json();
+    } catch {
+      // Body may be empty if called via query params
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const collectionId = searchParams.get("collectionId");
-    const resourceId = searchParams.get("resourceId");
+    const collectionId = bodyData?.collectionId || searchParams.get("collectionId");
+    const resourceId = bodyData?.resourceId || searchParams.get("resourceId");
+    const resourceIds = bodyData?.resourceIds;
+    const action = bodyData?.action;
+
+    if (action === "remove_resources" || (Array.isArray(resourceIds) && resourceIds.length > 0 && collectionId)) {
+      const ids: string[] = resourceIds || [];
+      if (ids.length > 0 && collectionId) {
+        const { error } = await supabase
+          .from("collection_resources")
+          .delete()
+          .eq("collection_id", collectionId)
+          .in("resource_id", ids);
+        if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+        return NextResponse.json({ ok: true, count: ids.length });
+      }
+    }
 
     if (collectionId && resourceId) {
       const { error } = await supabase
