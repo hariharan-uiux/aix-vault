@@ -27,7 +27,7 @@
   --foreground: #ededed;
   --muted-foreground: #888888;
   --subtle-foreground: #666666;
-  --border: #171717;
+  --border: rgba(255, 255, 255, 0.08);
   --subtle-background: #141414;
   --secondary: #fb923c;
   --secondary-foreground: #000000;
@@ -54,6 +54,18 @@
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
   background-color: color-mix(in srgb, var(--background) 80%, transparent);
+}
+
+.header-frosted {
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  backdrop-filter: blur(20px) saturate(190%);
+  background-color: color-mix(in srgb, var(--background) 78%, transparent);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .header-frosted {
+  background-color: color-mix(in srgb, var(--background) 72%, transparent);
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.4);
 }
 
 .frosted-dock {
@@ -96,73 +108,130 @@
     inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4);
 }
 
-/* Popup entrance animation: emerge and slide up smoothly from below */
+/* Popup entrance animation: emerge and slide up smoothly from below (no scale bounce) */
 @keyframes popup-slide-up-desktop {
   0% {
     opacity: 0;
-    transform: translateY(16px) scale(0.96);
+    transform: translateY(12px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 @keyframes popup-slide-up-mobile {
   0% {
     opacity: 0;
-    transform: translate(-50%, 16px) scale(0.96);
+    transform: translate(-50%, 12px);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translate(-50%, 0);
   }
 }
 
 .animate-popup-from-below {
-  animation: popup-slide-up-desktop 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: popup-slide-up-desktop 200ms ease-out forwards;
   transform-origin: bottom right;
 }
 
 @media (max-width: 639px) {
   .animate-popup-from-below {
-    animation: popup-slide-up-mobile 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: popup-slide-up-mobile 200ms ease-out forwards;
     transform-origin: bottom center;
   }
 }
 
-/* Centered popover slide-up animation (straight up from trigger button) */
+/* Centered popover slide-up animation (clean glide, no scale bounce) */
 @keyframes popover-slide-up {
   0% {
     opacity: 0;
-    transform: translateY(12px) scale(0.97);
+    transform: translateY(8px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 .animate-popover-slide-up {
-  animation: popover-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: popover-slide-up 180ms ease-out forwards;
   transform-origin: bottom center;
 }
 
-/* Speed dial vertical icon pop animation */
+/* Speed dial vertical icon entrance animation (no bounce) */
 @keyframes speed-dial-pop {
   0% {
     opacity: 0;
-    transform: translateY(14px) scale(0.75);
+    transform: translateY(8px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 .animate-speed-dial-pop {
-  animation: speed-dial-pop 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: speed-dial-pop 160ms ease-out both;
   transform-origin: bottom center;
+}
+
+/* Bottom sheet / drawer smooth slide animations (GPU-composited, zero bounce) */
+@keyframes drawer-slide-up {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes drawer-slide-down {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes drawer-backdrop-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes drawer-backdrop-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-drawer-in {
+  animation: drawer-slide-up 200ms ease-out forwards;
+  will-change: transform;
+}
+
+.animate-drawer-out {
+  animation: drawer-slide-down 160ms ease-in forwards;
+  will-change: transform;
+}
+
+.animate-drawer-backdrop-in {
+  animation: drawer-backdrop-fade-in 200ms ease-out forwards;
+  will-change: opacity;
+}
+
+.animate-drawer-backdrop-out {
+  animation: drawer-backdrop-fade-out 160ms ease-in forwards;
+  will-change: opacity;
 }
 
 /* Grayscale / monochrome icon mode (active on all devices including mobile) */

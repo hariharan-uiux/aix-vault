@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useVault } from "@/lib/vault/store";
@@ -122,11 +122,34 @@ export function Header() {
   } = useVault();
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const mainEl = headerRef.current?.closest("main");
+    const target = mainEl || window;
+
+    const handleScroll = () => {
+      const scrollY = mainEl ? mainEl.scrollTop : window.scrollY;
+      setIsScrolled(scrollY > 6);
+    };
+
+    handleScroll();
+
+    target.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      target.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
     <header
+      ref={headerRef}
       className={cn(
-        "sticky top-0 z-30 w-full border-b border-border apple-blur transition-all",
+        "sticky top-0 z-30 w-full transition-all duration-200",
+        isScrolled
+          ? "header-frosted border-b border-border/80 dark:border-white/[0.12]"
+          : "bg-transparent backdrop-blur-none border-b border-border dark:border-white/[0.08]",
         (authModalOpen || feedbackOpen) && "z-50",
       )}
     >
@@ -134,7 +157,12 @@ export function Header() {
         <div className="relative h-full w-full">
           {/* Background Grid Lines matching the Resource Grid below */}
           {view === "grid" && (
-            <div className="pointer-events-none absolute inset-0 -mr-px grid h-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08]">
+            <div
+              className={cn(
+                "pointer-events-none absolute inset-0 -mr-px grid h-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08] transition-opacity duration-200",
+                isScrolled ? "opacity-40" : "opacity-100",
+              )}
+            >
               <div className="h-full border-r border-border dark:border-white/[0.08]" />
               <div className="h-full border-r border-border dark:border-white/[0.08]" />
               <div className="hidden md:block h-full border-r border-border dark:border-white/[0.08]" />
@@ -324,7 +352,7 @@ export function Header() {
 </div>
 
       {/* Ambient Top Shimmer Bar during Supabase Loading / Syncing */}
-      {isLoading && (
+      {isLoading && result.total === 0 && (
         <div className="absolute -bottom-px left-0 right-0 h-[1.5px] overflow-hidden bg-transparent z-40 pointer-events-none">
           <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-foreground/60 to-transparent indeterminate-progress" />
         </div>

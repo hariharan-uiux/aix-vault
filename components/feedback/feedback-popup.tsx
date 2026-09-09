@@ -103,25 +103,21 @@ export function FeedbackPopup({ open, onClose }: FeedbackPopupProps) {
   };
 
   const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (open) {
       setMounted(true);
-      const raf = requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setVisible(true);
-        });
-      });
-      return () => cancelAnimationFrame(raf);
-    } else {
-      setVisible(false);
+      setIsClosing(false);
+    } else if (mounted) {
+      setIsClosing(true);
       const timer = setTimeout(() => {
         setMounted(false);
-      }, 320);
+        setIsClosing(false);
+      }, 160);
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [open, mounted]);
 
   if (!mounted) return null;
 
@@ -130,8 +126,8 @@ export function FeedbackPopup({ open, onClose }: FeedbackPopupProps) {
       {/* Backdrop */}
       <div
         className={cn(
-          "absolute inset-0 bg-black/40 dark:bg-black/65 backdrop-blur-[2px] transition-opacity duration-300 ease-out",
-          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+          "absolute inset-0 bg-black/40 dark:bg-black/65 backdrop-blur-[2px]",
+          isClosing ? "animate-drawer-backdrop-out" : "animate-drawer-backdrop-in",
         )}
         onClick={onClose}
         aria-hidden="true"
@@ -143,16 +139,12 @@ export function FeedbackPopup({ open, onClose }: FeedbackPopupProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Suggest a tool or feature"
-        style={{
-          transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
-        }}
         className={cn(
           "relative z-10 flex w-full max-w-md sm:max-w-lg flex-col gap-3.5",
-          "rounded-t-[28px] sm:rounded-t-[32px] border-t sm:border-x border-border/80 dark:border-white/12",
-          "bg-background/95 dark:bg-[#121318]/95 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl",
-          "will-change-transform transition-all duration-[320ms]",
+          "rounded-t-[20px] sm:rounded-t-[24px] border-t sm:border-x border-border/80 dark:border-white/12",
+          "bg-background dark:bg-[#121318] p-4 sm:p-6 shadow-2xl",
           "max-h-[85dvh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]",
-          visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-90",
+          isClosing ? "animate-drawer-out" : "animate-drawer-in",
         )}
       >
         {/* Pull Handle */}

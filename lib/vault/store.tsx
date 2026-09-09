@@ -472,6 +472,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     const cachedRemote = readRemoteCache();
     if (cachedRemote && cachedRemote.length > 0) {
       setRemoteResources(cachedRemote);
+      setIsLoading(false);
     }
 
     // 2. Read URL params
@@ -543,6 +544,10 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const refreshResources = useCallback(async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
     setIsSyncing(true);
+    const safetyTimeout = setTimeout(() => {
+      setIsLoading(false);
+      setIsSyncing(false);
+    }, 6000);
     try {
       let fetchedResources: Resource[] = [];
       const supabase = getSupabaseClient();
@@ -683,7 +688,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         }
       }
     } finally {
-      if (showLoading) setIsLoading(false);
+      clearTimeout(safetyTimeout);
+      setIsLoading(false);
       setIsSyncing(false);
     }
   }, []);

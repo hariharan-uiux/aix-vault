@@ -124,7 +124,7 @@ function MainPane() {
 
           <div className="relative z-10 w-full">
             {navigation.kind === "collection" ? (
-              <div className="px-3 pt-4 pb-2 sm:px-4 sm:pt-6 md:px-6 xl:px-0 flex items-center justify-between gap-3">
+              <div className="px-3 pt-4 pb-2 sm:px-4 sm:pt-6 md:px-6 xl:px-0 flex items-center justify-between gap-3 border-b border-border dark:border-white/[0.08]">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <h1 className="text-[20px] font-semibold tracking-tight sm:text-[24px] truncate">{title}</h1>
                   <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-mono border border-black/10 dark:border-white/10 bg-subtle-background text-muted-foreground">

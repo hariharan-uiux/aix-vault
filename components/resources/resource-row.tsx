@@ -109,7 +109,7 @@ export function ResourceRow({
       onContextMenu={(e) => onContextMenu?.(e, resource)}
       {...longPressProps}
       className={cn(
-        "group flex w-full items-center justify-between gap-3 border-b border-border px-3 py-2.5 text-left transition-colors duration-[120ms] hover:bg-subtle-background sm:px-4 sm:py-3",
+        "group flex w-full items-center justify-between gap-3 border-b border-border dark:border-white/[0.08] px-3 py-2.5 text-left transition-colors duration-[120ms] hover:bg-subtle-background sm:px-4 sm:py-3",
         isChecked && "bg-orange-500/[0.06] border-orange-500/40",
         selected && !isChecked && "bg-subtle-background",
       )}
@@ -252,8 +252,6 @@ export function ResourceGridCard({
       {...longPressProps}
       className={cn(
         "group relative flex min-h-[108px] sm:min-h-[118px] w-full cursor-pointer flex-col justify-between border-b border-r border-border dark:border-white/[0.08] p-3 sm:p-3.5 text-left transition-colors duration-[140ms] hover:bg-subtle-background/90 focus:outline-none select-none",
-        "xl:before:pointer-events-none xl:before:absolute xl:before:right-full xl:before:w-[100vw] xl:before:bottom-0 xl:before:h-px xl:before:bg-border dark:xl:before:bg-white/[0.08]",
-        "xl:after:pointer-events-none xl:after:absolute xl:after:left-full xl:after:w-[100vw] xl:after:bottom-0 xl:after:h-px xl:after:bg-border dark:xl:after:bg-white/[0.08]",
         isChecked && "bg-orange-500/[0.06] ring-2 ring-inset ring-orange-500/70 z-10",
         selected && !isChecked && "bg-subtle-background ring-1 ring-inset ring-orange-500/60 dark:ring-orange-400/60 z-10",
       )}

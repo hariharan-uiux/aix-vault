@@ -142,7 +142,7 @@ export function FloatingDock() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="pointer-events-auto frosted-dock shrink-0 flex size-11 sm:size-10 items-center justify-center rounded-full border border-black/10 dark:border-white/12 text-foreground transition-all duration-200 hover:bg-subtle-background hover:scale-105 active:scale-95 cursor-pointer shadow-lg sm:shadow-md outline-none focus:outline-none focus-visible:outline-none"
+            className="pointer-events-auto frosted-dock shrink-0 flex size-11 sm:size-10 items-center justify-center rounded-full border border-black/10 dark:border-white/12 text-foreground transition-colors duration-150 hover:bg-subtle-background cursor-pointer shadow-lg sm:shadow-md outline-none focus:outline-none focus-visible:outline-none"
             aria-label={isFolder ? "Add tool to this folder" : "Add resource"}
           >
             <Plus size={19} className="sm:size-4" strokeWidth={2.2} />

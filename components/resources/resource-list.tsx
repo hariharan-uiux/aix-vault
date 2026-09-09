@@ -112,12 +112,12 @@ export function ResourceList({
     return (
       <div className="w-full">
         {view === "grid" && (
-          <div className="w-full border-y border-border dark:border-white/[0.08] -mt-px bg-transparent">
-            <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08]">
+          <div className="w-full bg-transparent">
+            <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-border dark:border-white/[0.08]">
               {Array.from({ length: 18 }).map((_, index) => (
                 <div
                   key={index}
-                  className="relative flex min-h-[108px] sm:min-h-[118px] w-full flex-col justify-between border-b border-r border-border bg-subtle-background/10 p-3 sm:p-3.5 xl:before:pointer-events-none xl:before:absolute xl:before:right-full xl:before:w-[100vw] xl:before:bottom-0 xl:before:h-px xl:before:bg-border xl:after:pointer-events-none xl:after:absolute xl:after:left-full xl:after:w-[100vw] xl:after:bottom-0 xl:after:h-px xl:after:bg-border"
+                  className="relative flex min-h-[108px] sm:min-h-[118px] w-full flex-col justify-between border-b border-r border-border dark:border-white/[0.08] bg-subtle-background/10 p-3 sm:p-3.5"
                 >
                   {/* Top: Icon + Name & Subtitle skeletons to the right */}
                   <div className="flex w-full items-center gap-2.5 sm:gap-3">
@@ -154,11 +154,11 @@ export function ResourceList({
         )}
 
         {view === "list" && (
-          <div className="overflow-hidden rounded-2xl border border-border">
+          <div className="overflow-hidden rounded-2xl border border-border dark:border-white/[0.08]">
             {Array.from({ length: 10 }).map((_, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between gap-3 border-b border-border/80 px-3 py-2.5 sm:px-4 sm:py-3 last:border-b-0"
+                className="flex items-center justify-between gap-3 border-b border-border/80 dark:border-white/[0.08] px-3 py-2.5 sm:px-4 sm:py-3 last:border-b-0"
               >
                 <div className="flex items-center gap-3 flex-1">
                   <Skeleton className="size-10 shrink-0 rounded-xl" />
@@ -216,8 +216,8 @@ export function ResourceList({
   return (
     <>
       {view === "grid" && (
-        <div className="w-full border-y border-border dark:border-white/[0.08] -mt-px bg-transparent">
-          <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-r border-border dark:border-white/[0.08]">
+        <div className="w-full bg-transparent">
+          <div className="-mr-px -mb-px grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 border-l border-border dark:border-white/[0.08]">
             {resources.map((resource) => (
               <ResourceGridCard
                 key={resource.id}
@@ -246,7 +246,7 @@ export function ResourceList({
       )}
 
       {view === "list" && (
-        <div className="overflow-hidden rounded-2xl border border-border">
+        <div className="overflow-hidden rounded-2xl border border-border dark:border-white/[0.08]">
           {resources.map((resource) => (
             <ResourceRow
               key={resource.id}

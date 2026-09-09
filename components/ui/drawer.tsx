@@ -24,25 +24,21 @@ export function Drawer({
   contentClassName?: string;
 }) {
   const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (open) {
       setMounted(true);
-      const raf = requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setVisible(true);
-        });
-      });
-      return () => cancelAnimationFrame(raf);
-    } else {
-      setVisible(false);
+      setIsClosing(false);
+    } else if (mounted) {
+      setIsClosing(true);
       const timer = setTimeout(() => {
         setMounted(false);
-      }, 320);
+        setIsClosing(false);
+      }, 160);
       return () => clearTimeout(timer);
     }
-  }, [open]);
+  }, [open, mounted]);
 
   useEffect(() => {
     if (!open) return;
@@ -60,8 +56,8 @@ export function Drawer({
       {/* Backdrop */}
       <div
         className={cn(
-          "absolute inset-0 bg-black/40 dark:bg-black/65 backdrop-blur-[2px] transition-opacity duration-300 ease-out",
-          visible ? "opacity-100" : "opacity-0 pointer-events-none",
+          "absolute inset-0 bg-black/40 dark:bg-black/65 backdrop-blur-[2px]",
+          isClosing ? "animate-drawer-backdrop-out" : "animate-drawer-backdrop-in",
         )}
         onClick={onClose}
         aria-hidden="true"
@@ -71,16 +67,12 @@ export function Drawer({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        style={{
-          transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
-        }}
         className={cn(
           "relative z-10 flex w-full max-w-full sm:max-w-2xl md:max-w-3xl flex-col",
-          "rounded-t-[28px] sm:rounded-t-[32px] border-t border-x border-black/10 dark:border-white/[0.14]",
-          "bg-background/95 dark:bg-[#121318]/95 backdrop-blur-2xl shadow-[0_-12px_44px_rgba(0,0,0,0.25)] dark:shadow-[0_-12px_44px_rgba(0,0,0,0.7)]",
-          "max-h-[88dvh] sm:max-h-[85dvh] will-change-transform overflow-hidden",
-          "transition-all duration-[320ms]",
-          visible ? "translate-y-0 opacity-100" : "translate-y-full opacity-90",
+          "rounded-t-[20px] sm:rounded-t-[24px] border-t border-x border-black/10 dark:border-white/[0.14]",
+          "bg-background dark:bg-[#121318] shadow-[0_-12px_44px_rgba(0,0,0,0.25)] dark:shadow-[0_-12px_44px_rgba(0,0,0,0.7)]",
+          "max-h-[88dvh] sm:max-h-[85dvh] overflow-hidden",
+          isClosing ? "animate-drawer-out" : "animate-drawer-in",
           className,
         )}
       >

@@ -174,7 +174,7 @@ export function Popover({
               ref={contentRef}
               role="dialog"
               className={cn(
-                "pointer-events-auto min-w-[190px] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-140px)] overflow-y-auto overscroll-contain rounded-3xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-3 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-popover-slide-up",
+                "pointer-events-auto min-w-[190px] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-140px)] overflow-y-auto overscroll-contain rounded-2xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-3 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-popover-slide-up",
                 contentClassName,
               )}
             >

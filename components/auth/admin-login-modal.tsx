@@ -110,7 +110,7 @@ export function AdminLoginModal() {
         "w-[340px] sm:w-[380px] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-80px)] overflow-y-auto overscroll-contain",
         "rounded-2xl border border-border bg-background/95 backdrop-blur-2xl p-4 sm:p-5",
         "shadow-md",
-        "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150 ease-out origin-top-right",
+        "animate-in fade-in-0 slide-in-from-top-2 duration-150 ease-out origin-top-right",
       )}
     >
       {/* Header */}

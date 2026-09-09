@@ -151,13 +151,6 @@ export function ResourceForm() {
     setSubmitting(false);
   }
 
-  const [hasOpened, setHasOpened] = useState(false);
-  useEffect(() => {
-    if (addOpen) setHasOpened(true);
-  }, [addOpen]);
-
-  if (!hasOpened) return null;
-
   const currentCollection =
     navigation.kind === "collection"
       ? collections.find((c) => c.id === navigation.collectionId)
@@ -177,6 +170,30 @@ export function ResourceForm() {
             "Add Resource"
           )}
         </h3>
+      }
+      headerRight={
+        isAdmin ? (
+          <button
+            type="button"
+            onClick={() => setIsRecommended((prev) => !prev)}
+            className={cn(
+              "flex size-7.5 sm:size-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-subtle-background transition-all cursor-pointer",
+              isRecommended
+                ? "text-orange-500 dark:text-orange-400 hover:border-foreground/30 hover:bg-subtle-background/80"
+                : "text-muted-foreground hover:bg-orange-500/10 hover:text-orange-500 hover:border-orange-500/30",
+            )}
+            aria-label={isRecommended ? "Remove recommendation" : "Recommend resource"}
+            title={isRecommended ? "Recommended by Admin (Click to remove)" : "Recommend tool (Admin)"}
+          >
+            <Star
+              size={14}
+              className={cn(
+                "transition-transform active:scale-90",
+                isRecommended && "fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400",
+              )}
+            />
+          </button>
+        ) : null
       }
       onClose={() => {
         setAddOpen(false);
@@ -221,7 +238,6 @@ export function ResourceForm() {
             placeholder="https://example.com"
             required
             className="h-8 sm:h-9 rounded-full bg-subtle-background/50 focus:bg-background text-[12px] sm:text-[13px] px-3"
-            autoFocus
           />
         </label>
         {loadingMeta ? (
@@ -399,61 +415,6 @@ export function ResourceForm() {
           </div>
         </div>
 
-        {/* Admin Recommendation Toggle */}
-        {isAdmin && (
-          <div
-            onClick={() => setIsRecommended((prev) => !prev)}
-            className={cn(
-              "flex items-center justify-between rounded-xl border p-2.5 sm:p-3 transition-all cursor-pointer select-none",
-              isRecommended
-                ? "border-orange-500/40 bg-orange-500/10 shadow-2xs shadow-orange-500/10"
-                : "border-border/80 bg-subtle-background/40 hover:bg-subtle-background/80",
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  "flex size-7 items-center justify-center rounded-full border transition-all",
-                  isRecommended
-                    ? "border-border/80 bg-subtle-background text-orange-500 dark:text-orange-400"
-                    : "border-border/80 bg-background text-muted-foreground",
-                )}
-              >
-                <Star
-                  size={14}
-                  className={cn(
-                    "transition-transform",
-                    isRecommended
-                      ? "fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400 scale-105"
-                      : "text-muted-foreground",
-                  )}
-                />
-              </div>
-              <div className="text-left">
-                <span className="text-[12px] sm:text-[12.5px] font-medium text-foreground block leading-tight">
-                  Admin Recommendation
-                </span>
-                <span className="text-[11px] text-muted-foreground block mt-0.5 leading-tight">
-                  Show an orange star badge on this card
-                </span>
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
-                isRecommended ? "bg-orange-500" : "bg-muted-foreground/30",
-              )}
-            >
-              <span
-                className={cn(
-                  "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                  isRecommended ? "translate-x-4" : "translate-x-0",
-                )}
-              />
-            </div>
-          </div>
-        )}
 
         {error ? (
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-2.5 text-[12px] text-red-600 dark:text-red-400 leading-relaxed">
