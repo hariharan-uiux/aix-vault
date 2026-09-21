@@ -624,20 +624,23 @@ export function ResourceForm() {
           </div>
         </div>
 
-        {/* Mobile Bottom Action Bar: ADD, Star, and Close in horizontal line below */}
+        {/* Mobile Bottom Action Bar: ADD on left, Star in middle, and Close on right */}
         <div className="sm:hidden shrink-0 border-t border-black/10 dark:border-white/[0.14] bg-background/95 dark:bg-[#121318]/95 backdrop-blur-md px-4 py-3 flex items-center gap-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
-          {/* Close Button */}
+          {/* Add Button */}
           <button
-            type="button"
-            onClick={() => {
-              setAddOpen(false);
-              reset();
-            }}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-all cursor-pointer active:scale-95 shadow-2xs"
-            aria-label="Close popup"
-            title="Close"
+            type="submit"
+            disabled={submitting}
+            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-foreground text-background hover:bg-orange-500 hover:text-white transition-all shadow-xs active:scale-[0.98] cursor-pointer select-none font-medium text-[13px] disabled:opacity-50 disabled:pointer-events-none"
+            aria-label="Add Resource"
           >
-            <X size={16} />
+            {submitting ? (
+              <Loader2 size={16} className="animate-spin shrink-0" />
+            ) : (
+              <>
+                <Plus size={16} className="shrink-0 stroke-[2.5]" />
+                <span>Add Resource</span>
+              </>
+            )}
           </button>
 
           {/* Star / Admin Recommend Button */}
@@ -664,21 +667,18 @@ export function ResourceForm() {
             </button>
           )}
 
-          {/* Add Button */}
+          {/* Close Button */}
           <button
-            type="submit"
-            disabled={submitting}
-            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-foreground text-background hover:bg-orange-500 hover:text-white transition-all shadow-xs active:scale-[0.98] cursor-pointer select-none font-medium text-[13px] disabled:opacity-50 disabled:pointer-events-none"
-            aria-label="Add Resource"
+            type="button"
+            onClick={() => {
+              setAddOpen(false);
+              reset();
+            }}
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-all cursor-pointer active:scale-95 shadow-2xs"
+            aria-label="Close popup"
+            title="Close"
           >
-            {submitting ? (
-              <Loader2 size={16} className="animate-spin shrink-0" />
-            ) : (
-              <>
-                <Plus size={16} className="shrink-0 stroke-[2.5]" />
-                <span>Add Resource</span>
-              </>
-            )}
+            <X size={16} />
           </button>
         </div>
       </form>

@@ -39,7 +39,7 @@ export function DockMoreMenu() {
     (filters.free ? 1 : 0) +
     (filters.openSource ? 1 : 0);
 
-  const isCustomSort = sort !== "recent";
+  const isCustomSort = sort !== "upvotes";
   const totalActiveCount = activeFilterCount + (isCustomSort ? 1 : 0);
   const hasActiveState = totalActiveCount > 0;
 
