@@ -193,39 +193,41 @@ export function ResourceRow({
           </button>
         )}
 
-        {/* Upvote Button placed near open link button */}
-        <button
-          type="button"
-          onClick={(e) => upvoteResource(resource.id, e)}
-          title={isUpvoted ? "Remove upvote" : "Upvote this tool"}
-          aria-label={isUpvoted ? `Remove upvote for ${resource.name}` : `Upvote ${resource.name}`}
-          className={cn(
-            "flex h-7 shrink-0 items-center justify-center rounded-full border transition-all duration-200 cursor-pointer select-none active:scale-95 group/upvote overflow-hidden",
-            isUpvoted
-              ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold shadow-2xs"
-              : "border-border bg-subtle-background text-muted-foreground hover:border-foreground/30 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] hover:text-foreground",
-          )}
-          style={{ width: '28px' }}
-          onMouseEnter={(e) => e.currentTarget.style.width = 'auto'}
-          onMouseLeave={(e) => e.currentTarget.style.width = '28px'}
-        >
-          <div className="flex items-center justify-center w-[28px] group-hover/upvote:w-auto group-hover/upvote:justify-start group-hover/upvote:px-2 transition-all duration-200">
-            {isUpvoted ? (
-              <ChevronUp
-                size={13}
-                className="stroke-[2.8] transition-transform shrink-0"
-              />
-            ) : (
-              <ArrowUp
-                size={13}
-                className="stroke-[2] transition-transform shrink-0"
-              />
+        {/* Upvote Button placed near open link button - only for viewers */}
+        {!isAdmin && (
+          <button
+            type="button"
+            onClick={(e) => upvoteResource(resource.id, e)}
+            title={isUpvoted ? "Remove upvote" : "Upvote this tool"}
+            aria-label={isUpvoted ? `Remove upvote for ${resource.name}` : `Upvote ${resource.name}`}
+            className={cn(
+              "flex h-7 shrink-0 items-center justify-center rounded-full border transition-all duration-200 cursor-pointer select-none active:scale-95 group/upvote overflow-hidden",
+              isUpvoted
+                ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold shadow-2xs"
+                : "border-border bg-subtle-background text-muted-foreground hover:border-foreground/30 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] hover:text-foreground",
             )}
-            <span className="hidden group-hover/upvote:flex text-[11px] font-mono font-medium ml-1.5 transition-opacity duration-200 whitespace-nowrap">
-              {resource.upvotes ?? 0}
-            </span>
-          </div>
-        </button>
+            style={{ width: '28px' }}
+            onMouseEnter={(e) => e.currentTarget.style.width = 'auto'}
+            onMouseLeave={(e) => e.currentTarget.style.width = '28px'}
+          >
+            <div className="flex items-center justify-center w-[28px] group-hover/upvote:w-auto group-hover/upvote:justify-start group-hover/upvote:px-2 transition-all duration-200">
+              {isUpvoted ? (
+                <ChevronUp
+                  size={13}
+                  className="stroke-[2.8] transition-transform shrink-0"
+                />
+              ) : (
+                <ArrowUp
+                  size={13}
+                  className="stroke-[2] transition-transform shrink-0"
+                />
+              )}
+              <span className="hidden group-hover/upvote:flex text-[11px] font-mono font-medium ml-1.5 transition-opacity duration-200 whitespace-nowrap">
+                {resource.upvotes ?? 0}
+              </span>
+            </div>
+          </button>
+        )}
 
         <a
           href={resource.url}
@@ -382,39 +384,41 @@ export function ResourceGridCard({
             </button>
           )}
 
-          {/* Upvote Button placed near open link button */}
-          <button
-            type="button"
-            onClick={(e) => upvoteResource(resource.id, e)}
-            title={isUpvoted ? "Remove upvote" : "Upvote this tool"}
-            aria-label={isUpvoted ? `Remove upvote for ${resource.name}` : `Upvote ${resource.name}`}
-            className={cn(
-              "flex h-6.5 sm:h-7 shrink-0 items-center justify-center rounded-full border transition-all duration-200 cursor-pointer select-none active:scale-95 group/upvote overflow-hidden",
-              isUpvoted
-                ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold shadow-2xs"
-                : "border-border bg-subtle-background text-muted-foreground hover:border-foreground/30 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] hover:text-foreground",
-            )}
-            style={{ width: '26px' }}
-            onMouseEnter={(e) => e.currentTarget.style.width = 'auto'}
-            onMouseLeave={(e) => e.currentTarget.style.width = '26px'}
-          >
-            <div className="flex items-center justify-center w-[26px] group-hover/upvote:w-auto group-hover/upvote:justify-start group-hover/upvote:px-2 transition-all duration-200">
-              {isUpvoted ? (
-                <ChevronUp
-                  size={12}
-                  className="stroke-[2.8] transition-transform shrink-0"
-                />
-              ) : (
-                <ArrowUp
-                  size={12}
-                  className="stroke-[2] transition-transform shrink-0"
-                />
+          {/* Upvote Button placed near open link button - only for viewers */}
+          {!isAdmin && (
+            <button
+              type="button"
+              onClick={(e) => upvoteResource(resource.id, e)}
+              title={isUpvoted ? "Remove upvote" : "Upvote this tool"}
+              aria-label={isUpvoted ? `Remove upvote for ${resource.name}` : `Upvote ${resource.name}`}
+              className={cn(
+                "flex h-6.5 sm:h-7 shrink-0 items-center justify-center rounded-full border transition-all duration-200 cursor-pointer select-none active:scale-95 group/upvote overflow-hidden",
+                isUpvoted
+                  ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold shadow-2xs"
+                  : "border-border bg-subtle-background text-muted-foreground hover:border-foreground/30 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] hover:text-foreground",
               )}
-              <span className="hidden group-hover/upvote:flex text-[10.5px] sm:text-[11px] font-mono font-medium ml-1.5 transition-opacity duration-200 whitespace-nowrap">
-                {resource.upvotes ?? 0}
-              </span>
-            </div>
-          </button>
+              style={{ width: '26px' }}
+              onMouseEnter={(e) => e.currentTarget.style.width = 'auto'}
+              onMouseLeave={(e) => e.currentTarget.style.width = '26px'}
+            >
+              <div className="flex items-center justify-center w-[26px] group-hover/upvote:w-auto group-hover/upvote:justify-start group-hover/upvote:px-2 transition-all duration-200">
+                {isUpvoted ? (
+                  <ChevronUp
+                    size={12}
+                    className="stroke-[2.8] transition-transform shrink-0"
+                  />
+                ) : (
+                  <ArrowUp
+                    size={12}
+                    className="stroke-[2] transition-transform shrink-0"
+                  />
+                )}
+                <span className="hidden group-hover/upvote:flex text-[10.5px] sm:text-[11px] font-mono font-medium ml-1.5 transition-opacity duration-200 whitespace-nowrap">
+                  {resource.upvotes ?? 0}
+                </span>
+              </div>
+            </button>
+          )}
 
           {/* View Icon-only Button */}
           <a

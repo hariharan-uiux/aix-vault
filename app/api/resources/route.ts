@@ -185,23 +185,36 @@ export async function POST(request: Request) {
       if (pricing) updateData.pricing = pricing;
       if (isRecommended !== undefined) updateData.is_recommended = Boolean(isRecommended);
 
-      let { error: updateErr } = await supabase
-        .from("resources")
-        .update(updateData)
-        .eq("id", targetId);
+      const optionalUpdateCols = ["pricing", "is_recommended", "upvotes"];
+      let updateErr: { message?: string; code?: string } | null = null;
 
-      // If is_recommended column doesn't exist yet, retry without it
-      if (updateErr && (updateErr.message.includes("is_recommended") || updateErr.code === "42703")) {
-        delete updateData.is_recommended;
-        const retry = await supabase.from("resources").update(updateData).eq("id", targetId);
-        updateErr = retry.error;
-      }
+      for (let attempt = 0; attempt <= optionalUpdateCols.length; attempt++) {
+        const res = await supabase
+          .from("resources")
+          .update(updateData)
+          .eq("id", targetId);
+        updateErr = res.error;
+        if (!updateErr) break;
 
-      // If pricing column doesn't exist yet, retry without pricing
-      if (updateErr && (updateErr.message.includes("pricing") || updateErr.code === "42703")) {
-        delete updateData.pricing;
-        const retry = await supabase.from("resources").update(updateData).eq("id", targetId);
-        updateErr = retry.error;
+        const errMsg = (updateErr.message || "").toLowerCase();
+        let stripped = false;
+        for (const col of optionalUpdateCols) {
+          if (col in updateData && (errMsg.includes(col) || errMsg.includes(col.replace("_", "")))) {
+            delete updateData[col];
+            stripped = true;
+            break;
+          }
+        }
+        if (!stripped && (updateErr.code === "42703" || errMsg.includes("schema cache") || errMsg.includes("column"))) {
+          for (const col of optionalUpdateCols) {
+            if (col in updateData) {
+              delete updateData[col];
+              stripped = true;
+              break;
+            }
+          }
+        }
+        if (!stripped) break;
       }
 
       if (updateErr) {
@@ -267,7 +280,6 @@ export async function POST(request: Request) {
       created_by: createdBy || null,
       is_public: true,
       pricing: pricing || "Freemium",
-      upvotes: 0,
       created_at: now,
       updated_at: now,
     };
@@ -275,27 +287,33 @@ export async function POST(request: Request) {
       insertData.is_recommended = Boolean(isRecommended);
     }
 
-    let { error: insErr } = await supabase.from("resources").insert(insertData);
+    const optionalInsertCols = ["upvotes", "is_recommended", "pricing"];
+    let insErr: { message?: string; code?: string } | null = null;
 
-    // If upvotes column doesn't exist yet, retry without upvotes
-    if (insErr && (insErr.message.includes("upvotes") || insErr.code === "42703")) {
-      delete insertData.upvotes;
-      const retry = await supabase.from("resources").insert(insertData);
-      insErr = retry.error;
-    }
+    for (let attempt = 0; attempt <= optionalInsertCols.length; attempt++) {
+      const res = await supabase.from("resources").insert(insertData);
+      insErr = res.error;
+      if (!insErr) break;
 
-    // If is_recommended column doesn't exist yet, retry without is_recommended
-    if (insErr && (insErr.message.includes("is_recommended") || insErr.code === "42703")) {
-      delete insertData.is_recommended;
-      const retry = await supabase.from("resources").insert(insertData);
-      insErr = retry.error;
-    }
-
-    // If pricing column doesn't exist yet, retry without pricing
-    if (insErr && (insErr.message.includes("pricing") || insErr.code === "42703")) {
-      delete insertData.pricing;
-      const retry = await supabase.from("resources").insert(insertData);
-      insErr = retry.error;
+      const errMsg = (insErr.message || "").toLowerCase();
+      let stripped = false;
+      for (const col of optionalInsertCols) {
+        if (col in insertData && (errMsg.includes(col) || errMsg.includes(col.replace("_", "")))) {
+          delete insertData[col];
+          stripped = true;
+          break;
+        }
+      }
+      if (!stripped && (insErr.code === "42703" || errMsg.includes("schema cache") || errMsg.includes("column"))) {
+        for (const col of optionalInsertCols) {
+          if (col in insertData) {
+            delete insertData[col];
+            stripped = true;
+            break;
+          }
+        }
+      }
+      if (!stripped) break;
     }
 
     if (insErr) {
@@ -397,24 +415,36 @@ export async function PATCH(request: Request) {
     if (patch.isRecommended !== undefined) updatePayload.is_recommended = patch.isRecommended;
     if (patch.upvotes !== undefined) updatePayload.upvotes = patch.upvotes;
 
-    let { error: updateErr } = await supabase
-      .from("resources")
-      .update(updatePayload)
-      .eq("id", id);
+    const optionalPatchCols = ["pricing", "is_recommended", "upvotes"];
+    let updateErr: { message?: string; code?: string } | null = null;
 
-    // If pricing, is_recommended or upvotes column doesn't exist yet, retry without them
-    if (
-      updateErr &&
-      (updateErr.message.includes("pricing") ||
-        updateErr.message.includes("is_recommended") ||
-        updateErr.message.includes("upvotes") ||
-        updateErr.code === "42703")
-    ) {
-      delete updatePayload.pricing;
-      delete updatePayload.is_recommended;
-      delete updatePayload.upvotes;
-      const retry = await supabase.from("resources").update(updatePayload).eq("id", id);
-      updateErr = retry.error;
+    for (let attempt = 0; attempt <= optionalPatchCols.length; attempt++) {
+      const res = await supabase
+        .from("resources")
+        .update(updatePayload)
+        .eq("id", id);
+      updateErr = res.error;
+      if (!updateErr) break;
+
+      const errMsg = (updateErr.message || "").toLowerCase();
+      let stripped = false;
+      for (const col of optionalPatchCols) {
+        if (col in updatePayload && (errMsg.includes(col) || errMsg.includes(col.replace("_", "")))) {
+          delete updatePayload[col];
+          stripped = true;
+          break;
+        }
+      }
+      if (!stripped && (updateErr.code === "42703" || errMsg.includes("schema cache") || errMsg.includes("column"))) {
+        for (const col of optionalPatchCols) {
+          if (col in updatePayload) {
+            delete updatePayload[col];
+            stripped = true;
+            break;
+          }
+        }
+      }
+      if (!stripped) break;
     }
 
     if (updateErr) {

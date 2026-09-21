@@ -1646,6 +1646,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       e?.stopPropagation();
       e?.preventDefault();
 
+      if (isAdmin) {
+        setToast("Only viewers can upvote resources.");
+        return;
+      }
+
       const target = resources.find((r) => r.id === id);
       if (!target) return;
 
@@ -1705,7 +1710,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
       broadcastSync();
     },
-    [resources, upvotedIds, broadcastSync],
+    [isAdmin, resources, upvotedIds, broadcastSync],
   );
 
   const deleteResource = useCallback(

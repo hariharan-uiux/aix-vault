@@ -42,7 +42,8 @@ export async function POST(request: Request) {
 
       if (selectErr) {
         // If column upvotes doesn't exist yet, return gracefully
-        if (selectErr.message.includes("upvotes") || selectErr.code === "42703") {
+        const selectMsg = (selectErr.message || "").toLowerCase();
+        if (selectMsg.includes("upvote") || selectErr.code === "42703" || selectMsg.includes("schema cache")) {
           return NextResponse.json({ ok: true, warning: "upvotes column not yet added to database" });
         }
         return NextResponse.json({ ok: false, error: selectErr.message }, { status: 400 });
@@ -57,6 +58,10 @@ export async function POST(request: Request) {
         .eq("id", id);
 
       if (updateErr) {
+        const updateMsg = (updateErr.message || "").toLowerCase();
+        if (updateMsg.includes("upvote") || updateErr.code === "42703" || updateMsg.includes("schema cache")) {
+          return NextResponse.json({ ok: true, warning: "upvotes column not yet added to database" });
+        }
         return NextResponse.json({ ok: false, error: updateErr.message }, { status: 400 });
       }
 
