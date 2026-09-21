@@ -108,13 +108,13 @@ export function AdminLoginModal() {
       className={cn(
         "absolute right-0 top-[calc(100%+8px)] z-50",
         "w-[340px] sm:w-[380px] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-80px)] overflow-y-auto overscroll-contain",
-        "rounded-2xl border border-border bg-background/95 backdrop-blur-2xl p-4 sm:p-5",
-        "shadow-md",
+        "rounded-xl border border-black/10 dark:border-white/[0.14] bg-background dark:bg-[#121318] backdrop-blur-2xl p-4 sm:p-5",
+        "shadow-2xl shadow-black/15 dark:shadow-black/60",
         "animate-in fade-in-0 slide-in-from-top-2 duration-150 ease-out origin-top-right",
       )}
     >
       {/* Header */}
-      <div className="mb-3.5 flex items-center justify-between border-b border-border/60 pb-3">
+      <div className="flex items-center justify-between pb-3">
         <div className="flex items-center gap-2">
           {role === "admin" ? (
             <>
@@ -141,12 +141,15 @@ export function AdminLoginModal() {
             setAuthModalOpen(false);
             setError(null);
           }}
-          className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-subtle-background hover:text-foreground transition-colors cursor-pointer"
+          className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-colors cursor-pointer"
           aria-label="Close popup"
         >
           <X size={15} />
         </button>
       </div>
+
+      {/* Distinct divider line */}
+      <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] mb-3.5" />
 
       {/* Content */}
       <div className="space-y-4">

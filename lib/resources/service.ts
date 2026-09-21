@@ -123,10 +123,14 @@ export function filterResources(options: {
     );
   }
 
-  if (filters.free) {
+  if (filters.free === "free") {
     list = list.filter((resource) =>
       resource.tagIds.some((id) => tagById(id)?.slug === "free") ||
       getResourcePricing(resource) === "Free",
+    );
+  } else if (filters.free === "freemium") {
+    list = list.filter((resource) =>
+      getResourcePricing(resource) === "Freemium",
     );
   }
 
@@ -136,16 +140,27 @@ export function filterResources(options: {
     );
   }
 
+  if (filters.hasUpvotes) {
+    list = list.filter((resource) => (resource.upvotes ?? 0) > 0);
+  }
+
   if (search.trim()) {
     list = list
       .filter((resource) => matchesQuery(resource, search))
       .sort((a, b) => rankQuery(b, search) - rankQuery(a, search));
   } else if (sort === "name") {
     list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-  } else {
+  } else if (sort === "recent") {
     list = [...list].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
+  } else {
+    // Default: sort by upvotes descending, then recently created
+    list = [...list].sort((a, b) => {
+      const diff = (b.upvotes ?? 0) - (a.upvotes ?? 0);
+      if (diff !== 0) return diff;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
 
   const total = list.length;

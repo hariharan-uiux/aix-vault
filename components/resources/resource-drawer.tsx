@@ -13,7 +13,7 @@ import {
 } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
 import { cn, decodeHtmlEntities } from "@/lib/utils";
-import { ExternalLink, Pencil, Star, Trash2, X } from "lucide-react";
+import { ArrowUp, Check, ChevronUp, Copy, ExternalLink, Pencil, Star, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export function ResourceDrawer() {
@@ -26,6 +26,8 @@ export function ResourceDrawer() {
     updateResource,
     toggleRecommendResource,
     isAdmin,
+    upvotedIds,
+    upvoteResource,
     categories,
     resourceTypes,
     addCategory,
@@ -34,8 +36,10 @@ export function ResourceDrawer() {
     addResourceType,
     editResourceType,
     deleteResourceType,
+    setToast,
   } = useVault();
 
+  const [copied, setCopied] = useState(false);
   const [collectionId, setCollectionId] = useState("");
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -121,10 +125,15 @@ export function ResourceDrawer() {
     }
   }, [storeSelected]);
   const selected = storeSelected || lastSelected;
+  const isUpvoted = selected ? upvotedIds.includes(selected.id) : false;
 
   const [hasOpened, setHasOpened] = useState(false);
   useEffect(() => {
     if (storeSelected) setHasOpened(true);
+  }, [storeSelected]);
+
+  useEffect(() => {
+    setCopied(false);
   }, [storeSelected]);
 
   if (!hasOpened || !selected) {
@@ -156,6 +165,33 @@ export function ResourceDrawer() {
     setEditModalOpen(true);
   };
 
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selected) return;
+    const rawUrl = selected.url || selected.domain;
+    if (!rawUrl) return;
+    const urlToCopy = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(urlToCopy);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = urlToCopy;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setToast("Link copied to clipboard");
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setToast("Failed to copy link");
+    }
+  };
+
   const handleSaveEdit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!selected) return;
@@ -183,25 +219,7 @@ export function ResourceDrawer() {
     setEditModalOpen(false);
   };
 
-  // Drawer top header: title on the left
-  const headerTitle = (
-    <div className="flex items-center gap-2 min-w-0">
-      <h3 className="text-[14px] font-medium text-foreground truncate max-w-[180px] sm:max-w-[240px]">
-        {selected.name}
-      </h3>
-      {selected.isRecommended && (
-        <span
-          className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-subtle-background px-2 py-0.5 text-[10px] font-medium text-orange-600 dark:text-orange-400 shrink-0 select-none"
-          title="Admin Recommended"
-        >
-          <Star size={10} className="fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400" />
-          <span>Recommended</span>
-        </span>
-      )}
-    </div>
-  );
-
-  // Edit & Delete buttons placed near the close button
+  // Admin action buttons (Recommend, Edit, Delete)
   const headerRightActions = isAdmin ? (
     <div className="flex items-center gap-1.5">
       {/* Star / Recommendation button (Admin) */}
@@ -297,15 +315,6 @@ export function ResourceDrawer() {
         )}
       </div>
     </div>
-  ) : selected.isRecommended ? (
-    <div className="flex items-center">
-      <div
-        className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-subtle-background text-orange-500 dark:text-orange-400"
-        title="Admin Recommended"
-      >
-        <Star size={14} className="fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400" />
-      </div>
-    </div>
   ) : null;
 
   return (
@@ -313,17 +322,23 @@ export function ResourceDrawer() {
       <Drawer
         open={Boolean(storeSelected)}
         title={selected.name}
-        headerActions={headerTitle}
-        headerRight={headerRightActions}
+        showHeader={false}
         onClose={() => selectResource(null)}
-        contentClassName="p-0"
+        contentClassName="p-0 flex flex-col h-full"
       >
-      <div className="flex flex-col sm:flex-row w-full min-h-full">
-        {/* Left Column: Identity & Primary CTA */}
-        <div className="w-full sm:w-[240px] md:w-[260px] shrink-0 p-5 sm:p-6 flex flex-col justify-between text-center sm:text-left">
-          <div>
-            {/* Icon */}
-            <div className="flex justify-center sm:justify-start mb-3.5">
+      <div className="flex flex-col sm:flex-row w-full min-h-full flex-1 min-h-0">
+        {/* Main Content: Left Column (Identity) + Middle Column (Description & Details) */}
+        <div className="flex-1 min-w-0 flex flex-col sm:flex-row overflow-y-auto overscroll-contain">
+          {/* Left Column: Identity */}
+          <div className="w-full sm:w-[240px] md:w-[260px] shrink-0 p-5 sm:p-6 flex flex-col text-center sm:text-left">
+            {/* Top row: Icon on left, Admin tools on right */}
+            <div
+              className={cn(
+                "flex items-center mb-3.5",
+                isAdmin ? "justify-between" : "justify-center sm:justify-start",
+              )}
+            >
+            <div className="flex items-center">
               <ResourceIcon
                 resource={{
                   name: selected.name,
@@ -345,89 +360,77 @@ export function ResourceDrawer() {
                 grayscale={false}
               />
             </div>
+            {isAdmin && headerRightActions}
+          </div>
 
-            {/* Admin Recommended Badge */}
-            {selected.isRecommended && (
-              <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-0.5 text-[10.5px] font-medium text-orange-600 dark:text-orange-400 select-none">
-                <Star size={10} className="fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400" />
-                <span>Admin Recommended</span>
-              </div>
+          {/* Admin Recommended Badge */}
+          {selected.isRecommended && (
+            <div className="mb-2 inline-flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-2.5 py-0.5 text-[10.5px] font-medium text-orange-600 dark:text-orange-400 select-none">
+              <Star size={10} className="fill-orange-500 text-orange-500 dark:fill-orange-400 dark:text-orange-400" />
+              <span>Admin Recommended</span>
+            </div>
+          )}
+
+          {/* Name */}
+          <h2
+            contentEditable={isAdmin}
+            suppressContentEditableWarning
+            spellCheck={false}
+            onBlur={(e) => {
+              const text = e.currentTarget.textContent?.trim();
+              if (text && text !== selected.name) {
+                updateResource(selected.id, { name: text });
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            }}
+            style={{ outline: "none", border: "none", boxShadow: "none" }}
+            className={cn(
+              "text-[19px] sm:text-[21px] font-semibold tracking-tight text-foreground leading-snug outline-none focus:outline-none focus-visible:outline-none border-none select-text",
+              isAdmin && "cursor-text hover:opacity-80 transition-opacity",
             )}
+            title={isAdmin ? "Click to edit name" : undefined}
+          >
+            {selected.name}
+          </h2>
 
-            {/* Name */}
-            <h2
-              contentEditable={isAdmin}
-              suppressContentEditableWarning
-              spellCheck={false}
-              onBlur={(e) => {
-                const text = e.currentTarget.textContent?.trim();
-                if (text && text !== selected.name) {
-                  updateResource(selected.id, { name: text });
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.currentTarget.blur();
-                }
-              }}
-              style={{ outline: "none", border: "none", boxShadow: "none" }}
-              className={cn(
-                "text-[19px] sm:text-[21px] font-semibold tracking-tight text-foreground leading-snug outline-none focus:outline-none focus-visible:outline-none border-none select-text",
-                isAdmin && "cursor-text hover:opacity-80 transition-opacity",
-              )}
-              title={isAdmin ? "Click to edit name" : undefined}
-            >
-              {selected.name}
-            </h2>
-
-            {/* Website */}
-            <p
-              contentEditable={isAdmin}
-              suppressContentEditableWarning
-              spellCheck={false}
-              onBlur={(e) => {
-                const text = e.currentTarget.textContent?.trim();
-                if (text && text !== selected.url && text !== selected.domain) {
-                  let domain = selected.domain;
-                  try {
-                    domain = new URL(text.startsWith("http") ? text : `https://${text}`).hostname.replace(
-                      /^www\./,
-                      "",
-                    );
-                  } catch {}
-                  updateResource(selected.id, { url: text, domain });
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.currentTarget.blur();
-                }
-              }}
-              style={{ outline: "none", border: "none", boxShadow: "none" }}
-              className={cn(
-                "mt-0.5 sm:mt-1 text-[12.5px] text-muted-foreground outline-none focus:outline-none focus-visible:outline-none border-none select-text transition-colors truncate max-w-full",
-                isAdmin ? "cursor-text hover:text-orange-500" : "hover:text-foreground",
-              )}
-              title={isAdmin ? "Click to edit URL" : undefined}
-            >
-              {selected.domain || selected.url}
-            </p>
-          </div>
-
-          {/* Open Website Button */}
-          <div className="mt-5 sm:mt-8 w-full">
-            <a
-              href={selected.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-9 sm:h-9.5 w-full items-center justify-center gap-2 rounded-full bg-foreground text-[12.5px] sm:text-[13px] font-medium text-background hover:bg-orange-500 hover:text-white transition-all shadow-xs"
-            >
-              <span>Open Website</span>
-              <ExternalLink size={13.5} />
-            </a>
-          </div>
+          {/* Website */}
+          <p
+            contentEditable={isAdmin}
+            suppressContentEditableWarning
+            spellCheck={false}
+            onBlur={(e) => {
+              const text = e.currentTarget.textContent?.trim();
+              if (text && text !== selected.url && text !== selected.domain) {
+                let domain = selected.domain;
+                try {
+                  domain = new URL(text.startsWith("http") ? text : `https://${text}`).hostname.replace(
+                    /^www\./,
+                    "",
+                  );
+                } catch {}
+                updateResource(selected.id, { url: text, domain });
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            }}
+            style={{ outline: "none", border: "none", boxShadow: "none" }}
+            className={cn(
+              "mt-0.5 sm:mt-1 text-[12.5px] text-muted-foreground outline-none focus:outline-none focus-visible:outline-none border-none select-text transition-colors truncate max-w-full",
+              isAdmin ? "cursor-text hover:text-orange-500" : "hover:text-foreground",
+            )}
+            title={isAdmin ? "Click to edit URL" : undefined}
+          >
+            {selected.domain || selected.url}
+          </p>
         </div>
 
         {/* Distinct vertical line between left and right division (Desktop) */}
@@ -490,12 +493,12 @@ export function ResourceDrawer() {
                     })
                   }
                   title={`Pricing: ${currentPricing} (Click to switch)`}
-                  className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-2.5 py-0.5 text-[11.5px] font-medium text-foreground hover:border-foreground/30 hover:bg-subtle-background transition-colors cursor-pointer"
+                  className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-3.5 py-1.5 text-[12.5px] sm:text-[13px] font-medium text-foreground hover:border-foreground/30 hover:bg-subtle-background transition-colors cursor-pointer"
                 >
                   {currentPricing}
                 </button>
               ) : (
-                <span className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-2.5 py-0.5 text-[11.5px] font-medium text-muted-foreground">
+                <span className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-3.5 py-1.5 text-[12.5px] sm:text-[13px] font-medium text-muted-foreground">
                   {currentPricing}
                 </span>
               )}
@@ -512,7 +515,7 @@ export function ResourceDrawer() {
                   placeholder="Select category"
                   title="Change category"
                   align="left"
-                  triggerClassName="border border-black/10 dark:border-white/10 bg-subtle-background/80 hover:bg-subtle-background hover:text-foreground text-muted-foreground px-2.5 py-0.5 text-[11.5px] font-medium rounded-full shadow-none h-auto"
+                  triggerClassName="border border-black/10 dark:border-white/10 bg-subtle-background/80 hover:bg-subtle-background hover:text-foreground text-muted-foreground px-3.5 py-1.5 text-[12.5px] sm:text-[13px] font-medium rounded-full shadow-none h-auto"
                   contentClassName="w-[min(calc(100vw-2rem),15rem)]"
                   onAdd={(name) => {
                     const newCat = addCategory(name);
@@ -523,7 +526,7 @@ export function ResourceDrawer() {
                   onDelete={deleteCategory}
                 />
               ) : (
-                <span className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-2.5 py-0.5 text-[11.5px] font-medium text-muted-foreground">
+                <span className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-3.5 py-1.5 text-[12.5px] sm:text-[13px] font-medium text-muted-foreground">
                   {category?.name ?? selected.categoryId}
                 </span>
               )}
@@ -540,7 +543,7 @@ export function ResourceDrawer() {
                   placeholder="Select tool type"
                   title="Change tool type"
                   align="left"
-                  triggerClassName="border border-black/10 dark:border-white/10 bg-subtle-background/80 hover:bg-subtle-background hover:text-foreground text-muted-foreground px-2.5 py-0.5 text-[11.5px] font-medium rounded-full shadow-none h-auto"
+                  triggerClassName="border border-black/10 dark:border-white/10 bg-subtle-background/80 hover:bg-subtle-background hover:text-foreground text-muted-foreground px-3.5 py-1.5 text-[12.5px] sm:text-[13px] font-medium rounded-full shadow-none h-auto"
                   contentClassName="w-[min(calc(100vw-2rem),15rem)]"
                   onAdd={(name) => {
                     const newType = addResourceType(name);
@@ -551,7 +554,7 @@ export function ResourceDrawer() {
                   onDelete={deleteResourceType}
                 />
               ) : (
-                <span className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-2.5 py-0.5 text-[11.5px] font-medium text-muted-foreground">
+                <span className="rounded-full border border-black/10 dark:border-white/10 bg-subtle-background/80 px-3.5 py-1.5 text-[12.5px] sm:text-[13px] font-medium text-muted-foreground">
                   {resourceType?.name ?? selected.type}
                 </span>
               )}
@@ -582,12 +585,12 @@ export function ResourceDrawer() {
                       <span
                         key={id}
                         onClick={() => handleToggleTag(id)}
-                        className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 bg-subtle-background px-2.5 py-0.5 text-[11px] font-medium text-foreground hover:border-orange-500/50 hover:text-orange-500 cursor-pointer group transition-colors"
+                        className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 bg-subtle-background px-3 py-1 text-[12px] sm:text-[12.5px] font-medium text-foreground hover:border-orange-500/50 hover:text-orange-500 cursor-pointer group transition-colors"
                         title="Click to remove tag"
                       >
                         <span>{tagById(id)?.name ?? id}</span>
                         <X
-                          size={10}
+                          size={11}
                           className="opacity-0 group-hover:opacity-100 transition-opacity"
                         />
                       </span>
@@ -609,7 +612,7 @@ export function ResourceDrawer() {
                             type="button"
                             onClick={() => handleToggleTag(tag.id)}
                             className={cn(
-                              "rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-all cursor-pointer select-none",
+                              "rounded-full px-3 py-1 text-[12px] sm:text-[12.5px] font-medium transition-all cursor-pointer select-none",
                               isAssigned
                                 ? "bg-orange-500 font-semibold text-white"
                                 : "border border-black/10 dark:border-white/10 bg-background text-muted-foreground hover:border-orange-500/40 hover:text-orange-500",
@@ -664,6 +667,166 @@ export function ResourceDrawer() {
             </>
           )}
         </div>
+        </div>
+
+        {/* Distinct vertical line before right action column (Desktop) */}
+        <div className="hidden sm:block w-px bg-black/10 dark:bg-white/[0.14] shrink-0 self-stretch" />
+
+        {/* Right Column: Close, Copy Link & Open Actions (Desktop: Last Column) */}
+        <div className="hidden sm:flex w-14 md:w-16 shrink-0 bg-subtle-background/20 dark:bg-white/[0.015] self-stretch flex-col">
+          <div className="flex-1 flex flex-col items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-6">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => selectResource(null)}
+              className="flex size-9 sm:size-9.5 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-all cursor-pointer active:scale-95 shadow-2xs"
+              aria-label="Close popup"
+              title="Close"
+            >
+              <X size={15} />
+            </button>
+
+            {/* Copy Link Button */}
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={cn(
+                "flex size-9 sm:size-9.5 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer active:scale-95 shadow-2xs",
+                copied
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                  : "bg-subtle-background text-muted-foreground hover:bg-subtle-background/80 hover:text-foreground border-border/80",
+              )}
+              title={copied ? "Copied!" : "Copy link"}
+              aria-label="Copy link"
+            >
+              {copied ? (
+                <Check size={14} className="stroke-[2.5]" />
+              ) : (
+                <Copy size={13.5} />
+              )}
+            </button>
+
+            {/* Upvote Button */}
+            <button
+              type="button"
+              onClick={(e) => selected && upvoteResource(selected.id, e)}
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-full border transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-2xs group/upvote overflow-hidden",
+                isUpvoted
+                  ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold"
+                  : "bg-subtle-background text-muted-foreground hover:bg-subtle-background/80 hover:text-foreground border-border/80",
+              )}
+              title={isUpvoted ? "Remove upvote" : "Upvote this tool"}
+              aria-label={isUpvoted ? "Remove upvote" : "Upvote this tool"}
+              style={{ width: '36px', height: '36px' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.width = 'auto';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.width = '36px';
+              }}
+            >
+              <div className="flex items-center justify-center w-[36px] group-hover/upvote:w-auto group-hover/upvote:justify-start group-hover/upvote:px-2 transition-all duration-200">
+                {isUpvoted ? (
+                  <ChevronUp
+                    size={14}
+                    className="stroke-[2.8] transition-transform shrink-0"
+                  />
+                ) : (
+                  <ArrowUp
+                    size={14}
+                    className="stroke-[2] transition-transform shrink-0"
+                  />
+                )}
+                <span className="hidden group-hover/upvote:flex text-[9.5px] font-mono font-medium ml-1.5 transition-opacity duration-200 whitespace-nowrap">
+                  {selected.upvotes ?? 0}
+                </span>
+              </div>
+            </button>
+
+            {/* Open Website Button (Vertical Pill responsive to container height) */}
+            <a
+              href={selected.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-9 sm:w-9.5 flex-1 min-h-12 items-center justify-center rounded-full bg-foreground text-background hover:bg-orange-500 hover:text-white transition-all shadow-xs active:scale-[0.96] cursor-pointer select-none"
+              title={`Open ${selected.name}`}
+              aria-label={`Open ${selected.name} website`}
+            >
+              <ExternalLink size={15} className="shrink-0" />
+            </a>
+          </div>
+        </div>
+
+        {/* Mobile Bottom Action Bar: Close, Copy Link, Upvote, Open Website */}
+        <div className="sm:hidden shrink-0 border-t border-black/10 dark:border-white/[0.14] bg-background/95 dark:bg-[#121318]/95 backdrop-blur-md px-4 py-3 flex items-center gap-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
+          {/* Close Button */}
+          <button
+            type="button"
+            onClick={() => selectResource(null)}
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-all cursor-pointer active:scale-95 shadow-2xs"
+            aria-label="Close popup"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+
+          {/* Copy Link Button */}
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer active:scale-95 shadow-2xs",
+              copied
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                : "bg-subtle-background text-muted-foreground hover:bg-subtle-background/80 hover:text-foreground border-border/80",
+            )}
+            title={copied ? "Copied!" : "Copy link"}
+            aria-label="Copy link"
+          >
+            {copied ? (
+              <Check size={16} className="stroke-[2.5]" />
+            ) : (
+              <Copy size={15} />
+            )}
+          </button>
+
+          {/* Upvote Button */}
+          <button
+            type="button"
+            onClick={(e) => selected && upvoteResource(selected.id, e)}
+            className={cn(
+              "flex h-10 px-3.5 shrink-0 items-center justify-center gap-1.5 rounded-full border transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-2xs",
+              isUpvoted
+                ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold"
+                : "bg-subtle-background text-muted-foreground hover:bg-subtle-background/80 hover:text-foreground border-border/80",
+            )}
+            title={isUpvoted ? "Remove upvote" : "Upvote this tool"}
+            aria-label={isUpvoted ? "Remove upvote" : "Upvote this tool"}
+          >
+            {isUpvoted ? (
+              <ChevronUp size={15} className="stroke-[2.8]" />
+            ) : (
+              <ArrowUp size={15} className="stroke-[2]" />
+            )}
+            <span className="text-[11.5px] font-mono font-medium">
+              {selected.upvotes ?? 0}
+            </span>
+          </button>
+
+          {/* Open Website Button */}
+          <a
+            href={selected.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground text-background hover:bg-orange-500 hover:text-white transition-all shadow-xs active:scale-[0.98] cursor-pointer select-none font-medium text-[13px]"
+            title={`Open ${selected.name}`}
+            aria-label={`Open ${selected.name} website`}
+          >
+            <span>Open</span>
+            <ExternalLink size={14} className="shrink-0" />
+          </a>
+        </div>
       </div>
       </Drawer>
 
@@ -677,8 +840,8 @@ export function ResourceDrawer() {
           />
 
           {/* Dialog Card */}
-          <div className="relative z-50 w-full max-w-md rounded-2xl border border-border bg-background/95 backdrop-blur-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-left">
-            <div className="flex items-center justify-between mb-4">
+          <div className="relative z-50 w-full max-w-md rounded-xl border border-black/10 dark:border-white/[0.14] bg-background dark:bg-[#121318] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-left">
+            <div className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2.5">
                 <ResourceIcon
                   resource={{
@@ -693,12 +856,15 @@ export function ResourceDrawer() {
               <button
                 type="button"
                 onClick={() => setEditModalOpen(false)}
-                className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-subtle-background hover:text-foreground cursor-pointer transition-colors"
+                className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-colors cursor-pointer"
                 aria-label="Close edit modal"
               >
                 <X size={15} />
               </button>
             </div>
+
+            {/* Distinct divider line */}
+            <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] mb-4" />
 
             <form onSubmit={handleSaveEdit} className="space-y-3.5">
               <div>
@@ -709,7 +875,7 @@ export function ResourceDrawer() {
                   autoFocus
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground"
+                  className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-subtle-background/60 px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground/30"
                   placeholder="e.g. Figma"
                 />
               </div>
@@ -721,7 +887,7 @@ export function ResourceDrawer() {
                 <input
                   value={formUrl}
                   onChange={(e) => setFormUrl(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground"
+                  className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-subtle-background/60 px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground/30"
                   placeholder="https://..."
                 />
               </div>
@@ -734,7 +900,7 @@ export function ResourceDrawer() {
                   rows={2}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground resize-none"
+                  className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-subtle-background/60 px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground/30 resize-none"
                   placeholder="Brief description..."
                 />
               </div>
@@ -751,7 +917,7 @@ export function ResourceDrawer() {
                     searchPlaceholder="Search categories..."
                     placeholder="Select category"
                     className="w-full"
-                    triggerClassName="w-full justify-between h-9 rounded-xl px-3 text-[12.5px] bg-subtle-background border border-border text-foreground font-normal"
+                    triggerClassName="w-full justify-between h-9 rounded-xl px-3 text-[12.5px] bg-subtle-background/60 border border-black/10 dark:border-white/10 text-foreground font-normal"
                     contentClassName="w-[min(calc(100vw-3rem),240px)]"
                     onAdd={(name) => {
                       const newCat = addCategory(name);
@@ -774,7 +940,7 @@ export function ResourceDrawer() {
                     searchPlaceholder="Search tools..."
                     placeholder="Select tool type"
                     className="w-full"
-                    triggerClassName="w-full justify-between h-9 rounded-xl px-3 text-[12.5px] bg-subtle-background border border-border text-foreground font-normal"
+                    triggerClassName="w-full justify-between h-9 rounded-xl px-3 text-[12.5px] bg-subtle-background/60 border border-black/10 dark:border-white/10 text-foreground font-normal"
                     contentClassName="w-[min(calc(100vw-3rem),220px)]"
                     onAdd={(name) => {
                       const newType = addResourceType(name);
@@ -791,7 +957,7 @@ export function ResourceDrawer() {
                 <label className="block text-[12px] font-medium text-muted-foreground mb-1">
                   Pricing Model
                 </label>
-                <div className="grid grid-cols-2 gap-1 rounded-full bg-subtle-background/80 p-1 border border-border/60">
+                <div className="grid grid-cols-2 gap-1 rounded-full bg-subtle-background/80 p-1 border border-black/10 dark:border-white/10">
                   {(["Free", "Freemium"] as const).map((p) => (
                     <button
                       key={p}
@@ -817,7 +983,7 @@ export function ResourceDrawer() {
                   "flex items-center justify-between rounded-xl border p-2.5 transition-all cursor-pointer select-none",
                   formRecommended
                     ? "border-orange-500/40 bg-orange-500/10 shadow-2xs shadow-orange-500/10"
-                    : "border-border/80 bg-subtle-background/40 hover:bg-subtle-background/80",
+                    : "border-black/10 dark:border-white/10 bg-subtle-background/40 hover:bg-subtle-background/80",
                 )}
               >
                 <div className="flex items-center gap-2.5">
@@ -864,11 +1030,14 @@ export function ResourceDrawer() {
                 </div>
               </div>
 
-              <div className="mt-5 flex items-center justify-end gap-2 pt-2">
+              {/* Distinct divider line before actions */}
+              <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] mt-5 mb-3.5" />
+
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(false)}
-                  className="rounded-full border border-border px-4 py-1.5 text-[13px] font-medium text-muted-foreground hover:bg-subtle-background hover:text-foreground cursor-pointer transition-colors"
+                  className="rounded-full border border-black/10 dark:border-white/10 px-4 py-1.5 text-[13px] font-medium text-muted-foreground hover:bg-subtle-background hover:text-foreground cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>

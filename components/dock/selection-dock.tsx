@@ -450,7 +450,7 @@ export function SelectionDock() {
           <button
             type="button"
             onClick={clearSelection}
-            className="flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 cursor-pointer select-none"
+            className="flex size-10 sm:size-8 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:text-red-400 hover:bg-red-500/20 transition-all active:scale-95 cursor-pointer select-none"
             aria-label="Close selection"
           >
             <X size={18} strokeWidth={2} className="sm:size-[15px]" />

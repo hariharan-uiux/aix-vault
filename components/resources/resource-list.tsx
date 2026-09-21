@@ -279,7 +279,7 @@ export function ResourceList({
 
           <div
             style={{ top: contextMenu.y, left: contextMenu.x }}
-            className="fixed z-50 min-w-[200px] max-w-[min(calc(100vw-24px),240px)] overflow-hidden rounded-2xl border border-border/80 bg-background/95 backdrop-blur-xl p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.22)] dark:shadow-[0_20px_48px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-50 min-w-[200px] max-w-[min(calc(100vw-24px),240px)] overflow-hidden rounded-xl border border-border/80 bg-background/95 backdrop-blur-xl p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.22)] dark:shadow-[0_20px_48px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-100"
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
@@ -407,8 +407,8 @@ export function ResourceList({
           />
 
           {/* Dialog Card */}
-          <div className="relative z-50 w-full max-w-md rounded-2xl border border-border bg-background/95 backdrop-blur-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between mb-4">
+          <div className="relative z-50 w-full max-w-md rounded-xl border border-black/10 dark:border-white/[0.14] bg-background dark:bg-[#121318] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3">
               <div className="flex items-center gap-2.5">
                 <ResourceIcon resource={editingResource} size={32} />
                 <h3 className="text-[16px] font-semibold text-foreground">Edit Resource</h3>
@@ -416,11 +416,14 @@ export function ResourceList({
               <button
                 type="button"
                 onClick={() => setEditingResource(null)}
-                className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-subtle-background hover:text-foreground cursor-pointer"
+                className="flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-colors cursor-pointer"
               >
                 <X size={15} />
               </button>
             </div>
+
+            {/* Distinct divider line */}
+            <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] mb-4" />
 
             <form
               onSubmit={(e) => {
@@ -437,7 +440,7 @@ export function ResourceList({
                   autoFocus
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground"
+                  className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-subtle-background/60 px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground/30"
                   placeholder="e.g. Figma"
                 />
               </div>
@@ -449,7 +452,7 @@ export function ResourceList({
                 <input
                   value={editUrl}
                   onChange={(e) => setEditUrl(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-subtle-background px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground"
+                  className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-subtle-background/60 px-3 py-2 text-[13px] text-foreground outline-none focus:outline-none focus:border-foreground/30"
                   placeholder="https://..."
                 />
               </div>
@@ -458,7 +461,7 @@ export function ResourceList({
                 <label className="block text-[12px] font-medium text-muted-foreground mb-1">
                   Pricing Model
                 </label>
-                <div className="grid grid-cols-2 gap-1 rounded-full bg-subtle-background/80 p-1 border border-border/60">
+                <div className="grid grid-cols-2 gap-1 rounded-full bg-subtle-background/80 p-1 border border-black/10 dark:border-white/10">
                   {(["Free", "Freemium"] as const).map((p) => (
                     <button
                       key={p}
@@ -484,7 +487,7 @@ export function ResourceList({
                   "flex items-center justify-between rounded-xl border p-2.5 transition-all cursor-pointer select-none",
                   editRecommended
                     ? "border-orange-500/40 bg-orange-500/10 shadow-2xs shadow-orange-500/10"
-                    : "border-border/80 bg-subtle-background/40 hover:bg-subtle-background/80",
+                    : "border-black/10 dark:border-white/10 bg-subtle-background/40 hover:bg-subtle-background/80",
                 )}
               >
                 <div className="flex items-center gap-2.5">
@@ -531,17 +534,20 @@ export function ResourceList({
                 </div>
               </div>
 
-              <div className="mt-5 flex items-center justify-end gap-2 pt-2">
+              {/* Distinct divider line before actions */}
+              <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] mt-5 mb-3.5" />
+
+              <div className="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingResource(null)}
-                  className="rounded-full border border-border px-4 py-1.5 text-[13px] font-medium text-muted-foreground hover:bg-subtle-background hover:text-foreground cursor-pointer"
+                  className="rounded-full border border-black/10 dark:border-white/10 px-4 py-1.5 text-[13px] font-medium text-muted-foreground hover:bg-subtle-background hover:text-foreground cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-full bg-foreground px-4 py-1.5 text-[13px] font-medium text-background hover:opacity-90 cursor-pointer"
+                  className="rounded-full bg-foreground px-4 py-1.5 text-[13px] font-medium text-background hover:opacity-90 cursor-pointer transition-opacity"
                 >
                   Save Changes
                 </button>

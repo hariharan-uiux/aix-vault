@@ -1,7 +1,7 @@
 "use client";
 
 import { useVault } from "@/lib/vault/store";
-import { cn, faviconUrl } from "@/lib/utils";
+import { cn, faviconUrl, initials } from "@/lib/utils";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -26,7 +26,7 @@ function MiniAppIcon({
         <>
           {!isLoaded && (
             <span className="absolute inset-0 flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-zinc-800/50 uppercase tracking-tight select-none">
-              {name.slice(0, 2)}
+              {initials(name)}
             </span>
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -39,13 +39,24 @@ function MiniAppIcon({
               "size-full rounded-lg object-contain bg-white transition-opacity duration-200",
               isLoaded ? "opacity-100" : "opacity-0",
             )}
-            onLoad={() => setLoadedSrc(src)}
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              if (
+                img.src.includes("google.com/s2/favicons") &&
+                img.naturalWidth <= 16 &&
+                img.naturalHeight <= 16
+              ) {
+                setFailed(true);
+                return;
+              }
+              setLoadedSrc(src);
+            }}
             onError={() => setFailed(true)}
           />
         </>
       ) : (
         <span className="text-[9px] sm:text-[10px] font-bold text-zinc-800 uppercase tracking-tight">
-          {name.slice(0, 2)}
+          {initials(name)}
         </span>
       )}
     </div>
@@ -505,7 +516,7 @@ export function Sidebar() {
         role="dialog"
         aria-label="Collections and Saved Navigation"
         className={cn(
-          "fixed left-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-2xl sm:max-w-3xl md:max-w-4xl -translate-x-1/2 rounded-3xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup backdrop-blur-2xl backdrop-saturate-200 bg-background/65 dark:bg-background/55 p-3 sm:p-4 shadow-2xl shadow-black/25 dark:shadow-black/70 transition-all duration-200 ease-out",
+          "fixed left-1/2 z-50 -translate-x-1/2 w-fit min-w-[min(calc(100vw-1.5rem),220px)] max-w-[calc(100vw-1.5rem)] sm:max-w-[690px] rounded-xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup backdrop-blur-2xl backdrop-saturate-200 bg-background/65 dark:bg-background/55 p-3 sm:p-4 shadow-2xl shadow-black/25 dark:shadow-black/70 transition-all duration-200 ease-out",
           // Open from bottom (above the bottom dock) on both mobile & desktop
           "top-auto bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]",
           sidebarOpen
@@ -513,51 +524,10 @@ export function Sidebar() {
             : "translate-y-3 opacity-0 scale-[0.98] pointer-events-none",
         )}
       >
-        {/* Top Header Row: Folders Title & Count on Left, Saved Button & Close on Right */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Folders Section Title & Count */}
-          <div className="flex items-center gap-1.5 px-1">
-            <span className="text-[13px] font-semibold text-foreground tracking-tight">
-              Folders
-            </span>
-            <span
-              className={cn(
-                "rounded-full px-1.5 py-0.2 text-[10px] font-mono border transition-colors",
-                isDark
-                  ? "bg-white/10 text-zinc-300 border-white/10"
-                  : "bg-black/5 text-zinc-600 border-black/10",
-              )}
-            >
-              {collections.length}
-            </span>
-          </div>
 
-          {/* Right controls: Saved icon & close icon */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
 
-            {/* Close button (follows light & dark theme) */}
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-full border shadow-xs transition-colors cursor-pointer",
-                isDark
-                  ? "bg-[#181a20] border-white/15 text-zinc-300 hover:text-white hover:bg-[#22252e]"
-                  : "bg-white border-black/10 text-zinc-700 hover:text-black hover:bg-zinc-100",
-              )}
-              aria-label="Close collections bar"
-              title="Close (Esc)"
-            >
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-
-        {/* Divider below Header */}
-        <div className="my-2.5 sm:my-3 h-px w-full bg-black/10 dark:bg-white/12" />
-
-        {/* Realistic Folder Illustrations Grid: shows 6 folders on first line, wraps new folders to second line */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-6 pt-4 sm:pt-5 pb-2 px-1 max-h-[70vh] max-sm:max-h-[min(380px,50vh)] overflow-y-auto no-scrollbar">
+        {/* Realistic Folder Illustrations: wraps new folders to second line, responsive to count */}
+        <div className="flex flex-wrap items-start justify-center gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-6 pt-3 sm:pt-4 pb-2 px-1 max-h-[70vh] max-sm:max-h-[min(380px,50vh)] overflow-y-auto no-scrollbar">
           {collections.map((collection) => {
             const active =
               navigation.kind === "collection" &&
@@ -584,7 +554,7 @@ export function Sidebar() {
                     y,
                   });
                 }}
-                className="group relative flex w-full flex-col items-center gap-1.5 p-1 sm:p-2 text-center"
+                className="group relative flex w-[84px] sm:w-[96px] shrink-0 flex-col items-center gap-1.5 p-1 sm:p-2 text-center"
               >
                 {/* Folder icon button */}
                 <button
@@ -666,9 +636,15 @@ export function Sidebar() {
             );
           })}
 
+          {collections.length === 0 && !isAdmin && (
+            <div className="py-6 px-4 text-center text-xs text-muted-foreground w-full">
+              No folders created yet
+            </div>
+          )}
+
           {/* New folder item: inline input when adding, or + New Folder button (Admin Only) */}
           {isAdmin && (
-            <div className="group flex w-full flex-col items-center gap-1.5 p-1 sm:p-2 text-center">
+            <div className="group flex w-[84px] sm:w-[96px] shrink-0 flex-col items-center gap-1.5 p-1 sm:p-2 text-center">
               <button
                 type="button"
                 onClick={() => {
@@ -760,7 +736,7 @@ export function Sidebar() {
 
           <div
             style={{ top: contextMenu.y, left: contextMenu.x }}
-            className="fixed z-50 min-w-[150px] max-w-[min(calc(100vw-24px),180px)] overflow-hidden rounded-2xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-1 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-in fade-in zoom-in-95 duration-100"
+            className="fixed z-50 min-w-[150px] max-w-[min(calc(100vw-24px),180px)] overflow-hidden rounded-xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-1 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-in fade-in zoom-in-95 duration-100"
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >

@@ -42,6 +42,7 @@ export function Popover({
     left?: number;
     right?: number;
     isCenter?: boolean;
+    isMobile?: boolean;
   } | null>(null);
 
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -56,18 +57,18 @@ export function Popover({
     const dockPill = triggerRef.current.closest(".frosted-dock") ?? triggerRef.current;
     const dockRect = dockPill.getBoundingClientRect();
     const triggerRect = triggerRef.current.getBoundingClientRect();
+    const isMobile = window.innerWidth < 640;
 
     if (side === "top") {
       // Snug 6px gap directly above the dock
       const bottom = Math.max(12, Math.round(window.innerHeight - dockRect.top + 6));
+      if (isMobile) {
+        setCoords({ bottom, isMobile: true });
+        return;
+      }
       if (align === "center") {
-        // Centered on trigger button, clamped so 320px popover never clips off viewport edges
-        const center = Math.round(triggerRect.left + triggerRect.width / 2);
-        const halfWidth = 160;
-        const left = Math.max(
-          halfWidth + 12,
-          Math.min(window.innerWidth - halfWidth - 12, center),
-        );
+        // Centered on screen
+        const left = Math.round(window.innerWidth / 2);
         setCoords({ bottom, left, isCenter: true });
       } else if (align === "right") {
         const right = Math.round(window.innerWidth - triggerRect.right);
@@ -78,16 +79,16 @@ export function Popover({
       }
     } else {
       const top = Math.round(triggerRect.bottom + 8);
+      if (isMobile) {
+        setCoords({ top, isMobile: true });
+        return;
+      }
       if (align === "right") {
         const right = Math.round(window.innerWidth - triggerRect.right);
         setCoords({ top, right });
       } else if (align === "center") {
-        const center = Math.round(triggerRect.left + triggerRect.width / 2);
-        const halfWidth = 160;
-        const left = Math.max(
-          halfWidth + 12,
-          Math.min(window.innerWidth - halfWidth - 12, center),
-        );
+        // Centered on screen
+        const left = Math.round(window.innerWidth / 2);
         setCoords({ top, left, isCenter: true });
       } else {
         const left = Math.round(triggerRect.left);
@@ -159,22 +160,38 @@ export function Popover({
       {mounted && open && coords &&
         createPortal(
           <div
-            style={{
-              position: "fixed",
-              bottom: coords?.bottom !== undefined ? `${coords.bottom}px` : undefined,
-              top: coords?.top !== undefined ? `${coords.top}px` : undefined,
-              left: coords?.left !== undefined ? `${coords.left}px` : undefined,
-              right: coords?.right !== undefined ? `${coords.right}px` : undefined,
-              transform: coords?.isCenter ? "translateX(-50%)" : undefined,
-              zIndex: 50,
-              pointerEvents: "none",
-            }}
+            style={
+              coords?.isMobile
+                ? {
+                    position: "fixed",
+                    bottom: coords.bottom !== undefined ? `${coords.bottom}px` : undefined,
+                    top: coords.top !== undefined ? `${coords.top}px` : undefined,
+                    left: 0,
+                    right: 0,
+                    marginLeft: "auto",
+                    marginRight: "auto",
+                    width: "fit-content",
+                    maxWidth: "calc(100vw - 24px)",
+                    zIndex: 50,
+                    pointerEvents: "none",
+                  }
+                : {
+                    position: "fixed",
+                    bottom: coords?.bottom !== undefined ? `${coords.bottom}px` : undefined,
+                    top: coords?.top !== undefined ? `${coords.top}px` : undefined,
+                    left: coords?.left !== undefined ? `${coords.left}px` : undefined,
+                    right: coords?.right !== undefined ? `${coords.right}px` : undefined,
+                    transform: coords?.isCenter ? "translateX(-50%)" : undefined,
+                    zIndex: 50,
+                    pointerEvents: "none",
+                  }
+            }
           >
             <div
               ref={contentRef}
               role="dialog"
               className={cn(
-                "pointer-events-auto min-w-[190px] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-140px)] overflow-y-auto overscroll-contain rounded-2xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-3 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-popover-slide-up",
+                "pointer-events-auto min-w-[190px] max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-140px)] overflow-y-auto overscroll-contain rounded-xl border border-black/[0.08] dark:border-white/[0.14] frosted-popup p-3 shadow-2xl shadow-black/25 dark:shadow-black/70 animate-popover-slide-up",
                 contentClassName,
               )}
             >

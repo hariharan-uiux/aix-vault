@@ -44,6 +44,7 @@ function resource(
     isPublic: true,
     tagIds,
     saveCount: 0,
+    upvotes: 0,
   };
 }
 

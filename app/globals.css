@@ -123,11 +123,11 @@
 @keyframes popup-slide-up-mobile {
   0% {
     opacity: 0;
-    transform: translate(-50%, 12px);
+    transform: translateY(10px);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 }
 
@@ -215,22 +215,22 @@
 }
 
 .animate-drawer-in {
-  animation: drawer-slide-up 200ms ease-out forwards;
+  animation: drawer-slide-up 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: transform;
 }
 
 .animate-drawer-out {
-  animation: drawer-slide-down 160ms ease-in forwards;
+  animation: drawer-slide-down 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: transform;
 }
 
 .animate-drawer-backdrop-in {
-  animation: drawer-backdrop-fade-in 200ms ease-out forwards;
+  animation: drawer-backdrop-fade-in 220ms ease-out forwards;
   will-change: opacity;
 }
 
 .animate-drawer-backdrop-out {
-  animation: drawer-backdrop-fade-out 160ms ease-in forwards;
+  animation: drawer-backdrop-fade-out 180ms ease-in forwards;
   will-change: opacity;
 }
 

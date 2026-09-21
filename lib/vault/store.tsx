@@ -45,6 +45,19 @@ import { flushSync } from "react-dom";
 
 const STORAGE_KEY = "aix-vault:v2";
 const REMOTE_CACHE_KEY = "aix-vault:remote-cache";
+const UPVOTED_STORAGE_KEY = "aix-vault:upvoted-ids";
+
+function readUpvotedIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(UPVOTED_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 function readRemoteCache(): Resource[] | null {
   if (typeof window === "undefined") return null;
@@ -63,6 +76,8 @@ type Persisted = {
   deletedIds: string[];
   deletedCollectionIds?: string[];
   savedIds: string[];
+  upvotedIds?: string[];
+  upvoteCounts?: Record<string, number>;
   collections: Collection[];
   collectionResources: CollectionResource[];
   saveCounts: Record<string, number>;
@@ -90,6 +105,8 @@ function readInitial(): Persisted {
     deletedIds: [],
     deletedCollectionIds: [],
     savedIds: [],
+    upvotedIds: [],
+    upvoteCounts: {},
     collections: [],
     collectionResources: [],
     saveCounts: {},
@@ -184,9 +201,9 @@ function readInitialUrl(): {
     return {
       navigation: { kind: "all" },
       search: "",
-      filters: { type: null, tagIds: [], free: false, openSource: false },
+      filters: { type: null, tagIds: [], free: null, openSource: false },
       view: "grid",
-      sort: "recent",
+      sort: "upvotes",
     };
   }
   const params = new URLSearchParams(window.location.search);
@@ -211,13 +228,13 @@ function readInitialUrl(): {
   const filters: Filters = {
     type: null,
     tagIds: tag ? [tag] : [],
-    free: false,
+    free: null,
     openSource: false,
   };
   const view: ViewMode =
     viewParam === "grid" || viewParam === "compact" || viewParam === "list" ? viewParam : "grid";
   const sort: SortMode =
-    sortParam === "name" || sortParam === "recent" ? sortParam : "recent";
+    sortParam === "name" || sortParam === "recent" || sortParam === "upvotes" ? sortParam : "upvotes";
   return { navigation, search: query, filters, view, sort };
 }
 
@@ -229,6 +246,7 @@ type VaultContextValue = {
   lastSyncedAt: Date | null;
   collections: Collection[];
   savedIds: string[];
+  upvotedIds: string[];
   navigation: Navigation;
   search: string;
   deferredSearch: string;
@@ -271,6 +289,7 @@ type VaultContextValue = {
   loginAsAdmin: (email: string, password?: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   saveResource: (id: string) => void;
+  upvoteResource: (id: string, e?: React.MouseEvent) => Promise<void>;
   addToCollection: (resourceId: string, collectionId: string) => void;
   addResourcesToCollection: (resourceIds: string[], collectionId: string) => void;
   removeResourcesFromCollection: (resourceIds: string[], collectionId: string) => void;
@@ -353,6 +372,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [deletedCollectionIds, setDeletedCollectionIds] = useState<string[]>([]);
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [upvotedIds, setUpvotedIds] = useState<string[]>([]);
+  const [upvoteCounts, setUpvoteCounts] = useState<Record<string, number>>({});
   const [recommendedIds, setRecommendedIds] = useState<string[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [collectionResources, setCollectionResources] = useState<CollectionResource[]>([]);
@@ -364,8 +385,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [lastCategoryNav, setLastCategoryNav] = useState<Navigation>({ kind: "all" });
   const [search, setSearch] = useState("");
   const [deferredSearch, setDeferredSearch] = useState("");
-  const [filters, setFilters] = useState<Filters>({ type: null, tagIds: [], free: false, openSource: false });
-  const [sort, setSort] = useState<SortMode>("recent");
+  const [filters, setFilters] = useState<Filters>({ type: null, tagIds: [], free: null, openSource: false });
+  const [sort, setSort] = useState<SortMode>("upvotes");
   const [view, setView] = useState<ViewMode>("grid");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -446,6 +467,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       setDeletedCollectionIds(persisted.deletedCollectionIds);
     }
     if (persisted.savedIds.length > 0) setSavedIds(persisted.savedIds);
+    if (persisted.upvotedIds && persisted.upvotedIds.length > 0) {
+      setUpvotedIds(persisted.upvotedIds);
+    }
+    if (persisted.upvoteCounts && Object.keys(persisted.upvoteCounts).length > 0) {
+      setUpvoteCounts(persisted.upvoteCounts);
+    }
+    const localUpvoted = readUpvotedIds();
+    if (localUpvoted.length > 0) {
+      setUpvotedIds((prev) => Array.from(new Set([...prev, ...localUpvoted])));
+    }
     if (persisted.recommendedIds && persisted.recommendedIds.length > 0) {
       setRecommendedIds(persisted.recommendedIds);
     }
@@ -602,6 +633,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
                 saveCount: 0,
                 pricing: (r as unknown as Record<string, unknown>).pricing === "Free" ? "Free" : "Freemium",
                 isRecommended: Boolean((r as unknown as Record<string, unknown>).is_recommended) || hasRecommendedTag,
+                upvotes: typeof (r as unknown as Record<string, unknown>).upvotes === "number" ? Number((r as unknown as Record<string, unknown>).upvotes) : 0,
               };
             });
           }
@@ -1147,6 +1179,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         deletedIds,
         deletedCollectionIds,
         savedIds,
+        upvotedIds,
+        upvoteCounts,
         collections,
         collectionResources,
         saveCounts,
@@ -1164,6 +1198,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     deletedIds,
     deletedCollectionIds,
     savedIds,
+    upvotedIds,
+    upvoteCounts,
     collections,
     collectionResources,
     saveCounts,
@@ -1301,8 +1337,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       isRecommended: Boolean(resource.isRecommended) || recommendedIds.includes(resource.id),
       tagIds: enrichResourceTags(resource),
       saveCount: saveCounts[resource.id] ?? resource.saveCount,
+      upvotes: upvoteCounts[resource.id] !== undefined ? upvoteCounts[resource.id] : (resource.upvotes ?? 0),
     }));
-  }, [deletedIds, extras, remoteResources, saveCounts, recommendedIds]);
+  }, [deletedIds, extras, remoteResources, saveCounts, recommendedIds, upvoteCounts]);
 
   const collectionResourceIds = useCallback(
     (id: string) =>
@@ -1455,6 +1492,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         saveCount: 0,
         pricing: data.pricing ?? "Freemium",
         isRecommended: Boolean(data.isRecommended),
+        upvotes: 0,
       };
 
       // Persist to Supabase via server API route
@@ -1601,6 +1639,73 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       broadcastSync();
     },
     [isAdmin, resources, recommendedIds, refreshResources, broadcastSync],
+  );
+
+  const upvoteResource = useCallback(
+    async (id: string, e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      e?.preventDefault();
+
+      const target = resources.find((r) => r.id === id);
+      if (!target) return;
+
+      const isCurrentlyUpvoted = upvotedIds.includes(id);
+      const delta = isCurrentlyUpvoted ? -1 : 1;
+      const currentCount = target.upvotes ?? 0;
+      const nextCount = Math.max(0, currentCount + delta);
+
+      // Optimistic UI updates
+      setUpvotedIds((current) => {
+        const next = isCurrentlyUpvoted
+          ? current.filter((item) => item !== id)
+          : [...current, id];
+        try {
+          window.localStorage.setItem(UPVOTED_STORAGE_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      setUpvoteCounts((current) => ({
+        ...current,
+        [id]: nextCount,
+      }));
+
+      setExtras((current) => {
+        const exists = current.some((item) => item.id === id);
+        if (exists) {
+          return current.map((item) =>
+            item.id === id ? { ...item, upvotes: nextCount, updatedAt: new Date().toISOString() } : item,
+          );
+        }
+        return [...current, { ...target, upvotes: nextCount, updatedAt: new Date().toISOString() }];
+      });
+
+      setToast(
+        isCurrentlyUpvoted
+          ? "Upvote removed."
+          : `Upvoted ${target.name}! Thanks for your vote.`,
+      );
+
+      try {
+        const res = await fetch("/api/resources/upvote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, delta }),
+        });
+        const data = await res.json().catch(() => null);
+        if (data?.ok && typeof data?.upvotes === "number") {
+          setUpvoteCounts((current) => ({
+            ...current,
+            [id]: data.upvotes,
+          }));
+        }
+      } catch (err) {
+        console.warn("[upvoteResource] Could not sync upvote with server:", err);
+      }
+
+      broadcastSync();
+    },
+    [resources, upvotedIds, broadcastSync],
   );
 
   const deleteResource = useCallback(
@@ -2235,6 +2340,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     lastSyncedAt,
     collections,
     savedIds,
+    upvotedIds,
     navigation,
     search,
     deferredSearch,
@@ -2352,6 +2458,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         return exists ? current.filter((item) => item !== id) : [...current, id];
       });
     },
+    upvoteResource,
     addToCollection: (resourceId, collectionId) => {
       if (!isAdmin) {
         setToast("Admin permission required to manage folders.");

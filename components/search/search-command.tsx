@@ -75,12 +75,12 @@ export function SearchCommand() {
         role="dialog"
         aria-modal="true"
         aria-label="Search resources"
-        className="relative w-full max-w-[540px] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/15 dark:shadow-black/50 animate-in fade-in-0 zoom-in-95 duration-150"
+        className="relative w-full max-w-[540px] overflow-hidden rounded-xl border border-black/10 dark:border-white/[0.14] bg-background dark:bg-[#121318] shadow-2xl shadow-black/15 dark:shadow-black/50 animate-in fade-in-0 zoom-in-95 duration-150"
       >
         {/* Header Search Bar */}
         <form
           onSubmit={handleFormSubmit}
-          className="flex items-center gap-2.5 border-b border-border/70 px-3.5 py-2.5"
+          className="flex items-center gap-2.5 border-b border-black/10 dark:border-white/[0.14] px-3.5 py-2.5"
         >
           <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle-background border border-border/80 text-muted-foreground shadow-2xs">
             <Search size={13} />
@@ -116,7 +116,7 @@ export function SearchCommand() {
           <button
             type="button"
             onClick={() => setCommandOpen(false)}
-            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-subtle-background/80 hover:text-foreground border border-border/80 transition-colors cursor-pointer"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X size={13} />

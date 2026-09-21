@@ -1,9 +1,8 @@
 "use client";
 
 import {
-  FilterPopover,
+  FilterSortPopover,
   PlatformToggle,
-  SortMenu,
 } from "@/components/filters/filters";
 import { DockMoreMenu } from "@/components/dock/dock-more-menu";
 import { SelectionDock } from "@/components/dock/selection-dock";
@@ -99,13 +98,10 @@ export function FloatingDock() {
           </button>
         </Tooltip>
 
-        {/* Desktop Detailed Dock Controls (Filters, Sort, Select) */}
+        {/* Desktop Detailed Dock Controls (Filter & Sort, Select) */}
         <div className="hidden sm:flex items-center gap-1 sm:gap-1.5">
-          {/* Filters Popover Button */}
-          <FilterPopover side="top" align="center" iconOnly />
-
-          {/* Sort Menu Popover Button */}
-          <SortMenu side="top" align="center" iconOnly />
+          {/* Combined Filter & Sort Popover Button */}
+          <FilterSortPopover side="top" align="center" iconOnly />
 
           {/* Select Mode Button (Admin Only) */}
           {isAdmin && (

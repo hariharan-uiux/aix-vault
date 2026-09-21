@@ -13,10 +13,13 @@ import {
   Check,
   ChevronDown,
   Code2,
+  DollarSign,
   Layers,
   Palette,
   Search,
   SlidersHorizontal,
+  Tag,
+  Type,
   X,
 } from "lucide-react";
 
@@ -137,7 +140,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
       <span
         aria-hidden="true"
         className={cn(
-          "pointer-events-none absolute inset-y-0.5 rounded-full bg-background/95 dark:bg-neutral-900/95 shadow-xs",
+          "pointer-events-none absolute inset-y-0.5 rounded-full bg-white shadow-sm",
           pillStyle.ready ? "opacity-100" : "opacity-0",
         )}
         style={{
@@ -158,7 +161,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
         className={cn(
           "relative z-10 flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-colors duration-300 ease-in-out cursor-pointer active:scale-95 select-none whitespace-nowrap outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-0 bg-transparent",
           isAll
-            ? "text-foreground font-semibold"
+            ? "text-black font-semibold"
             : "text-muted-foreground hover:text-foreground",
         )}
       >
@@ -174,7 +177,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
         className={cn(
           "relative z-10 flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-colors duration-300 ease-in-out cursor-pointer active:scale-95 select-none whitespace-nowrap outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-0 bg-transparent",
           isDev
-            ? "text-foreground font-semibold"
+            ? "text-black font-semibold"
             : "text-muted-foreground hover:text-foreground",
         )}
       >
@@ -190,7 +193,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
         className={cn(
           "relative z-10 flex h-9 sm:h-7 flex-1 sm:flex-initial min-w-0 items-center justify-center gap-1.5 rounded-full px-3 sm:px-3.5 text-[13px] font-medium transition-colors duration-300 ease-in-out cursor-pointer active:scale-95 select-none whitespace-nowrap outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 focus-visible:ring-0 border-0 bg-transparent",
           isDesign
-            ? "text-foreground font-semibold"
+            ? "text-black font-semibold"
             : "text-muted-foreground hover:text-foreground",
         )}
       >
@@ -202,6 +205,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
 }
 
 export const sorts: { id: SortMode; label: string }[] = [
+  { id: "upvotes", label: "Most Upvoted" },
   { id: "recent", label: "Recently Added" },
   { id: "name", label: "Name A–Z" },
 ];
@@ -298,7 +302,7 @@ function TypeSelectDropdown({
 
       {open && (
         <div
-          className="mt-1.5 w-full rounded-2xl border border-black/[0.08] dark:border-white/[0.14] bg-background/95 dark:bg-[#18191e]/95 backdrop-blur-xl p-1.5 shadow-xl shadow-black/20 dark:shadow-black/60 animate-in fade-in-0 zoom-in-95 duration-150"
+          className="mt-1.5 w-full rounded-xl border border-black/[0.08] dark:border-white/[0.14] bg-background/95 dark:bg-[#18191e]/95 backdrop-blur-xl p-1.5 shadow-xl shadow-black/20 dark:shadow-black/60 animate-in fade-in-0 zoom-in-95 duration-150"
           role="listbox"
         >
           {/* Search filter input with smooth pill container and ZERO square box/outline */}
@@ -358,7 +362,7 @@ function TypeSelectDropdown({
                       setOpen(false);
                     }}
                     className={cn(
-                      "flex items-center justify-between w-full px-3 py-1.5 text-[12px] rounded-xl text-left transition-colors cursor-pointer select-none outline-none focus:outline-none",
+                      "flex items-center justify-between w-full px-3 py-1.5 text-[12px] rounded-full text-left transition-colors cursor-pointer select-none outline-none focus:outline-none",
                       isSelectedRealType
                         ? "bg-orange-500/15 font-semibold text-orange-600 dark:bg-orange-400/20 dark:text-orange-400"
                         : isSelected
@@ -393,7 +397,350 @@ function TypeSelectDropdown({
   );
 }
 
-export function FilterPopover({
+function TagsSelectDropdown({
+  selectedTagIds,
+  onChange,
+}: {
+  selectedTagIds: string[];
+  onChange: (tagIds: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedCount = selectedTagIds.length;
+
+  const currentLabel = useMemo(() => {
+    if (selectedCount === 0) return "All Tags";
+    if (selectedCount === 1) {
+      const tag = tags.find((t) => t.id === selectedTagIds[0]);
+      return tag ? tag.name : "1 tag selected";
+    }
+    return `${selectedCount} tags selected`;
+  }, [selectedTagIds, selectedCount]);
+
+  const filteredTags = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tags;
+    return tags.filter((t) => t.name.toLowerCase().includes(q));
+  }, [query]);
+
+  // Click outside to collapse
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  // Reset query when closing and auto-focus
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+      });
+    } else {
+      setQuery("");
+    }
+  }, [open]);
+
+  const toggleTag = (id: string) => {
+    if (selectedTagIds.includes(id)) {
+      onChange(selectedTagIds.filter((tId) => tId !== id));
+    } else {
+      onChange([...selectedTagIds, id]);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={cn(
+          "flex h-9 w-full items-center justify-between rounded-full border px-3.5 text-[12.5px] transition-colors cursor-pointer outline-none select-none",
+          selectedCount > 0
+            ? "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 font-medium"
+            : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] text-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.08]",
+          open && selectedCount === 0 && "border-black/20 dark:border-white/20 bg-black/[0.06] dark:bg-white/[0.08]",
+        )}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
+          <span className="truncate font-medium">{currentLabel}</span>
+          {selectedCount > 1 && (
+            <span className="shrink-0 flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white">
+              {selectedCount}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          size={13}
+          className={cn(
+            "shrink-0 text-muted-foreground transition-transform duration-200",
+            open && "rotate-180 text-foreground",
+          )}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="mt-1.5 w-full rounded-xl border border-black/[0.08] dark:border-white/[0.14] bg-background/95 dark:bg-[#18191e]/95 backdrop-blur-xl p-2 shadow-xl shadow-black/20 dark:shadow-black/60 animate-in fade-in-0 zoom-in-95 duration-150"
+          role="listbox"
+        >
+          {/* Search input with smooth pill container */}
+          <div className="p-0.5 pb-2">
+            <div className="flex items-center gap-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] px-2.5 py-1.5 transition-colors focus-within:border-black/20 dark:focus-within:border-white/20">
+              <Search size={12} className="shrink-0 text-muted-foreground" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                name="tag-search"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search tags..."
+                style={{
+                  outline: "none",
+                  boxShadow: "none",
+                  border: "none",
+                }}
+                className="w-full bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 border-none p-0 m-0 shadow-none focus:shadow-none"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    searchInputRef.current?.focus();
+                  }}
+                  className="shrink-0 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer outline-none focus:outline-none"
+                  title="Clear"
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Tag Pills Container */}
+          <div className="max-h-36 overflow-y-auto overscroll-contain flex flex-wrap gap-1.5 p-1 no-scrollbar">
+            {filteredTags.length > 0 ? (
+              filteredTags.map((tag) => {
+                const active = selectedTagIds.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleTag(tag.id)}
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-[11.5px] transition-colors cursor-pointer select-none inline-flex items-center gap-1",
+                      active
+                        ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium shadow-2xs"
+                        : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.1] hover:text-foreground",
+                    )}
+                  >
+                    <span>{tag.name}</span>
+                    {active && <Check size={11} className="shrink-0" />}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="py-2.5 w-full text-center text-[11.5px] text-muted-foreground">
+                No tags found
+              </div>
+            )}
+          </div>
+
+          {selectedCount > 0 && (
+            <div className="pt-1.5 mt-1 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between px-1">
+              <span className="text-[10.5px] text-muted-foreground font-mono">
+                {selectedCount} selected
+              </span>
+              <button
+                type="button"
+                onClick={() => onChange([])}
+                className="text-[11px] text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+              >
+                Clear all tags
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function FilterSortContent({
+  onClose,
+}: {
+  onClose?: () => void;
+  showTitle?: boolean;
+} = {}) {
+  const { filters, setFilters, sort, setSort } = useVault();
+
+  const activeFilterCount =
+    (filters.type ? 1 : 0) +
+    filters.tagIds.length +
+    (filters.free ? 1 : 0);
+
+  const isCustomSort = sort !== "upvotes";
+  const totalActiveCount = activeFilterCount + (isCustomSort ? 1 : 0);
+
+  return (
+    <div className="space-y-3.5 text-[13px]">
+      {/* Sort Section */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <ArrowUpDown size={11} />
+            Sort By
+          </span>
+          {isCustomSort && (
+            <span className="text-[10.5px] font-mono font-medium text-orange-600 dark:text-orange-400">
+              {sorts.find((s) => s.id === sort)?.label}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+          {sorts.map((item) => {
+            const isSelected = sort === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSort(item.id)}
+                className={cn(
+                  "flex items-center justify-center rounded-full px-2.5 sm:px-3 py-1.5 text-[11.5px] sm:text-[12px] font-medium transition-all cursor-pointer border select-none",
+                  isSelected
+                    ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold shadow-2xs"
+                    : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.02] dark:bg-white/[0.04] text-muted-foreground hover:bg-black/[0.05] dark:hover:bg-white/[0.08] hover:text-foreground",
+                )}
+              >
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="h-px bg-black/[0.06] dark:bg-white/[0.08]" />
+
+      {/* Filter Section: Pricing & License */}
+      <div>
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <DollarSign size={11} />
+          Pricing & License
+        </span>
+        <div className="grid grid-cols-2 gap-1.5 text-[11.5px] sm:text-[12px]">
+          <button
+            type="button"
+            onClick={() => setFilters({ ...filters, free: filters.free === "free" ? null : "free" })}
+            className={cn(
+              "flex items-center justify-center rounded-full border px-2.5 sm:px-3 py-1.5 cursor-pointer select-none transition-colors",
+              filters.free === "free"
+                ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-medium"
+                : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.02] dark:bg-white/[0.04] text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <span className="truncate">Free</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilters({ ...filters, free: filters.free === "freemium" ? null : "freemium" })}
+            className={cn(
+              "flex items-center justify-center rounded-full border px-2.5 sm:px-3 py-1.5 cursor-pointer select-none transition-colors",
+              filters.free === "freemium"
+                ? "border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400 font-medium"
+                : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.02] dark:bg-white/[0.04] text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <span className="truncate">Freemium</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Section: Resource Type */}
+      <div>
+        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <Type size={11} />
+          Resource Type
+        </span>
+        <TypeSelectDropdown
+          value={filters.type}
+          onChange={(type) => setFilters({ ...filters, type })}
+        />
+      </div>
+
+      {/* Filter Section: Tags */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Tag size={11} />
+            Tags {filters.tagIds.length > 0 && `(${filters.tagIds.length})`}
+          </span>
+          {filters.tagIds.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilters({ ...filters, tagIds: [] })}
+              className="text-[10.5px] text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Clear tags
+            </button>
+          )}
+        </div>
+        <TagsSelectDropdown
+          selectedTagIds={filters.tagIds}
+          onChange={(tagIds) => setFilters({ ...filters, tagIds })}
+        />
+      </div>
+
+      {totalActiveCount > 0 && (
+        <div className="pt-1 flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setFilters({
+                type: null,
+                free: null,
+                openSource: false,
+                hasUpvotes: false,
+                tagIds: [],
+              });
+              setSort("upvotes");
+            }}
+            className="text-[11.5px] font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors cursor-pointer underline underline-offset-2"
+          >
+            Reset all
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function FilterSortPopover({
   side = "top",
   align = "center",
   triggerClassName,
@@ -404,12 +751,14 @@ export function FilterPopover({
   triggerClassName?: string;
   iconOnly?: boolean;
 } = {}) {
-  const { filters, setFilters } = useVault();
-  const activeCount =
+  const { filters, sort } = useVault();
+  const activeFilterCount =
     (filters.type ? 1 : 0) +
     filters.tagIds.length +
-    (filters.free ? 1 : 0) +
-    (filters.openSource ? 1 : 0);
+    (filters.free ? 1 : 0);
+  const isCustomSort = sort !== "upvotes";
+  const totalActiveCount = activeFilterCount + (isCustomSort ? 1 : 0);
+  const currentSortLabel = sorts.find((s) => s.id === sort)?.label ?? "Sort";
 
   return (
     <Popover
@@ -418,26 +767,34 @@ export function FilterPopover({
       triggerClassName={({ open }) =>
         cn(
           iconOnly
-            ? "size-8 p-0 justify-center rounded-full border transition-all cursor-pointer"
-            : "rounded-full h-8 px-3 text-[12px] sm:text-[13px] border transition-all cursor-pointer",
-          activeCount > 0
-            ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
+            ? "size-10 sm:size-8 p-0 justify-center rounded-full border transition-all cursor-pointer select-none outline-none focus:outline-none focus-visible:outline-none active:scale-95"
+            : "rounded-full h-10 sm:h-8 px-3 text-[12px] sm:text-[13px] border transition-all cursor-pointer select-none outline-none focus:outline-none focus-visible:outline-none active:scale-95",
+          totalActiveCount > 0
+            ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10 font-semibold"
             : open
               ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
               : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
           triggerClassName,
         )
       }
-      contentClassName="w-[min(calc(100vw-24px),19rem)] sm:w-80"
+      contentClassName="w-[min(calc(100vw-24px),18.5rem)] sm:w-[285px] p-3 sm:p-3.5"
       label={({ open }) => {
-        const hasActive = activeCount > 0;
+        const hasActive = totalActiveCount > 0;
+        const tooltipLabel = hasActive
+          ? isCustomSort && activeFilterCount > 0
+            ? `Filter & Sort (${activeFilterCount} active, ${currentSortLabel})`
+            : isCustomSort
+              ? `Filter & Sort (${currentSortLabel})`
+              : `Filter & Sort (${activeFilterCount} active)`
+          : "Filter & Sort";
+
         return iconOnly ? (
-          <Tooltip label={hasActive ? `Filters (${activeCount} active)` : "Filters"}>
-            <span className="relative flex size-8 items-center justify-center">
+          <Tooltip label={tooltipLabel}>
+            <span className="relative flex size-10 sm:size-8 items-center justify-center">
               <SlidersHorizontal
-                size={14}
+                size={16}
                 className={cn(
-                  "transition-colors",
+                  "sm:size-3.5 transition-colors",
                   hasActive
                     ? "text-orange-600 dark:text-orange-400"
                     : open
@@ -446,8 +803,8 @@ export function FilterPopover({
                 )}
               />
               {hasActive && (
-                <span className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-semibold text-white">
-                  {activeCount}
+                <span className="absolute top-1.5 right-1.5 sm:top-0 sm:right-0 flex size-3.5 sm:size-3 items-center justify-center rounded-full bg-orange-500 text-[8.5px] sm:text-[8px] font-bold text-white shadow-xs">
+                  {totalActiveCount}
                 </span>
               )}
             </span>
@@ -455,14 +812,14 @@ export function FilterPopover({
         ) : (
           <>
             <span className={cn("hidden sm:inline", hasActive && "text-orange-600 dark:text-orange-400 font-medium")}>
-              Filters
+              Filter & Sort
             </span>
             <span className={cn("sm:hidden", hasActive && "text-orange-600 dark:text-orange-400 font-medium")}>
-              Filter
+              Filter & Sort
             </span>
             {hasActive ? (
               <Badge className="h-4 min-w-4 justify-center px-1 py-0 text-[10px] bg-orange-500 text-white">
-                {activeCount}
+                {totalActiveCount}
               </Badge>
             ) : (
               <ChevronDown size={12} className={hasActive ? "text-orange-600 dark:text-orange-400" : ""} />
@@ -471,193 +828,11 @@ export function FilterPopover({
         );
       }}
     >
-      <div className="space-y-3 text-[13px]">
-        <div>
-          <span className="mb-1 block text-[11.5px] font-medium text-muted-foreground">Resource Type</span>
-          <TypeSelectDropdown
-            value={filters.type}
-            onChange={(type) => setFilters({ ...filters, type })}
-          />
-        </div>
-        <div className="flex items-center gap-4 text-[12.5px]">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={filters.free}
-              onChange={(event) => setFilters({ ...filters, free: event.target.checked })}
-              className="rounded border-border accent-orange-500 dark:accent-orange-500 cursor-pointer"
-            />
-            <span>Free</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={filters.openSource}
-              onChange={(event) =>
-                setFilters({ ...filters, openSource: event.target.checked })
-              }
-              className="rounded border-border accent-orange-500 dark:accent-orange-500 cursor-pointer"
-            />
-            <span>Open Source</span>
-          </label>
-        </div>
-        <div>
-          <span className="mb-1 block text-[11.5px] font-medium text-muted-foreground">Tags</span>
-          <div className="flex max-h-36 flex-wrap gap-1 overflow-y-auto overscroll-contain pr-1">
-            {tags.slice(0, 16).map((tag) => {
-              const active = filters.tagIds.includes(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() =>
-                    setFilters({
-                      ...filters,
-                      tagIds: active
-                        ? filters.tagIds.filter((id) => id !== tag.id)
-                        : [...filters.tagIds, tag.id],
-                    })
-                  }
-                  className={cn(
-                    "rounded-full border px-2.5 py-0.5 text-[11.5px] transition-colors cursor-pointer",
-                    active
-                      ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium shadow-2xs"
-                      : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.1] hover:text-foreground",
-                  )}
-                >
-                  {tag.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {activeCount > 0 && (
-          <div className="pt-1 flex justify-end">
-            <button
-              type="button"
-              onClick={() =>
-                setFilters({
-                  type: null,
-                  free: false,
-                  openSource: false,
-                  tagIds: [],
-                })
-              }
-              className="text-[11.5px] text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors cursor-pointer underline underline-offset-2"
-            >
-              Reset all filters
-            </button>
-          </div>
-        )}
-      </div>
+      <FilterSortContent />
     </Popover>
   );
 }
 
-function SortMenuList({ className }: { className?: string } = {}) {
-  const { sort, setSort } = useVault();
-  const popover = usePopover();
-
-  return (
-    <div className={cn("flex flex-col gap-0.5", className)}>
-      <span className="mb-1 px-2.5 text-[11.5px] font-medium text-muted-foreground">
-        Sort resources by
-      </span>
-      {sorts.map((item) => {
-        const isSelected = sort === item.id;
-        const isCustomSort = isSelected && item.id !== "recent";
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => {
-              setSort(item.id);
-              popover.close();
-            }}
-            className={cn(
-              "flex items-center justify-between rounded-full px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer",
-              isCustomSort
-                ? "bg-orange-500/15 text-orange-600 dark:bg-orange-400/20 dark:text-orange-400 font-medium"
-                : isSelected
-                  ? "bg-black/[0.04] dark:bg-white/[0.06] text-foreground font-medium"
-                  : "text-muted-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.05] hover:text-foreground",
-            )}
-          >
-            <span>{item.label}</span>
-            {isSelected && (
-              <Check
-                size={14}
-                className={isCustomSort ? "text-orange-600 dark:text-orange-400" : "text-foreground"}
-              />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-export function SortMenu({
-  side = "top",
-  align = "center",
-  triggerClassName,
-  iconOnly = true,
-}: {
-  side?: "top" | "bottom";
-  align?: "left" | "right" | "center";
-  triggerClassName?: string;
-  iconOnly?: boolean;
-} = {}) {
-  const { sort } = useVault();
-  const current = sorts.find((item) => item.id === sort)?.label ?? "Sort";
-  const isSorted = sort !== "recent";
-
-  return (
-    <Popover
-      side={side}
-      align={align}
-      triggerClassName={({ open }) =>
-        cn(
-          iconOnly
-            ? "size-8 p-0 justify-center rounded-full border transition-all cursor-pointer"
-            : "rounded-full h-8 px-3 text-[12px] sm:text-[13px] border transition-all cursor-pointer",
-          isSorted
-            ? "border-orange-500/40 bg-orange-500/15 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 shadow-xs shadow-orange-500/10 dark:shadow-orange-400/10"
-            : open
-              ? "border-black/20 dark:border-white/20 bg-black/[0.08] dark:bg-white/[0.12] text-foreground"
-              : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-black/[0.08] dark:hover:bg-white/[0.12] hover:text-foreground",
-          triggerClassName,
-        )
-      }
-      label={({ open }) => {
-        return iconOnly ? (
-          <Tooltip label={`Sort: ${current}`}>
-            <span className="relative flex size-8 items-center justify-center">
-              <ArrowUpDown
-                size={14}
-                className={cn(
-                  "transition-colors",
-                  isSorted
-                    ? "text-orange-600 dark:text-orange-400"
-                    : open
-                      ? "text-foreground"
-                      : "text-muted-foreground",
-                )}
-              />
-              {isSorted && (
-                <span className="absolute top-1 right-1 size-1.5 rounded-full bg-orange-500 dark:bg-orange-400 ring-2 ring-background" />
-              )}
-            </span>
-          </Tooltip>
-        ) : (
-          <>
-            <span className={cn("hidden sm:inline", isSorted && "text-orange-600 dark:text-orange-400 font-medium")}>{current}</span>
-            <ChevronDown size={12} className={isSorted ? "text-orange-600 dark:text-orange-400" : ""} />
-          </>
-        );
-      }}
-    >
-      <SortMenuList />
-    </Popover>
-  );
-}
+// Backward compatibility exports
+export const FilterPopover = FilterSortPopover;
+export const SortMenu = FilterSortPopover;

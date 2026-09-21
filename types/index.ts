@@ -39,6 +39,7 @@ export type Resource = {
   saveCount: number;
   pricing?: "Free" | "Freemium";
   isRecommended?: boolean;
+  upvotes?: number;
 };
 
 export type Collection = {
@@ -59,7 +60,7 @@ export type CollectionResource = {
 };
 
 export type ViewMode = "list" | "grid" | "compact";
-export type SortMode = "recent" | "name";
+export type SortMode = "upvotes" | "recent" | "name";
 
 export type Platform = "all" | "development" | "design";
 
@@ -72,6 +73,7 @@ export type Navigation =
 export type Filters = {
   type: string | null;
   tagIds: string[];
-  free: boolean;
+  free: "free" | "freemium" | null;
   openSource: boolean;
+  hasUpvotes?: boolean;
 };

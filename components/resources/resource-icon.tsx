@@ -52,11 +52,17 @@ export function ResourceIcon({
     setIsLoaded(false);
   }, [resource.iconUrl, resource.domain]);
 
-  useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
-      setIsLoaded(true);
+  const isFallbackIcon = (img: HTMLImageElement | null) => {
+    if (!img) return true;
+    if (img.naturalWidth === 0 || img.naturalHeight === 0) return true;
+    // Google Favicons and DuckDuckGo return a 16x16 default globe/placeholder when no logo exists
+    const isService =
+      img.src.includes("google.com/s2/favicons") || img.src.includes("duckduckgo.com/ip3");
+    if (isService && img.naturalWidth <= 16 && img.naturalHeight <= 16) {
+      return true;
     }
-  }, [currentSrc]);
+    return false;
+  };
 
   const handleError = () => {
     if (!triedFallback && fallbackSrc && fallbackSrc !== currentSrc) {
@@ -67,8 +73,37 @@ export function ResourceIcon({
     }
   };
 
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    if (isFallbackIcon(e.currentTarget)) {
+      handleError();
+      return;
+    }
+    setIsLoaded(true);
+  };
+
+  useEffect(() => {
+    if (imgRef.current?.complete) {
+      if (isFallbackIcon(imgRef.current)) {
+        handleError();
+      } else {
+        setIsLoaded(true);
+      }
+    }
+  }, [currentSrc]);
+
   const isLarge = size >= 44;
   const isExtraLarge = size >= 52;
+
+  const fontSizeClass =
+    size >= 52
+      ? "text-[18px] font-bold tracking-tight"
+      : size >= 44
+        ? "text-[15px] font-bold tracking-tight"
+        : size >= 36
+          ? "text-[13px] font-semibold tracking-tight"
+          : size >= 30
+            ? "text-[11px] font-semibold tracking-tight"
+            : "text-[9.5px] font-bold tracking-tight";
 
   const outerRadiusClass = isExtraLarge
     ? "rounded-2xl"
@@ -115,7 +150,7 @@ export function ResourceIcon({
           <span
             className={cn(
               "absolute inset-0 flex items-center justify-center font-medium select-none transition-opacity duration-200",
-              isLarge ? "text-[13px] font-semibold" : "text-[11px]",
+              fontSizeClass,
               avatarColorClass,
               isLoaded ? "opacity-0 pointer-events-none" : "opacity-100",
             )}
@@ -127,8 +162,12 @@ export function ResourceIcon({
           <img
             ref={(el) => {
               imgRef.current = el;
-              if (el?.complete && el.naturalWidth > 0 && !isLoaded) {
-                setIsLoaded(true);
+              if (el?.complete && !isLoaded) {
+                if (isFallbackIcon(el)) {
+                  handleError();
+                } else {
+                  setIsLoaded(true);
+                }
               }
             }}
             src={currentSrc}
@@ -142,7 +181,7 @@ export function ResourceIcon({
               isMono && "resource-icon-mono grayscale",
               isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
             )}
-            onLoad={() => setIsLoaded(true)}
+            onLoad={handleLoad}
             onError={handleError}
           />
         </div>
@@ -151,7 +190,7 @@ export function ResourceIcon({
           className={cn(
             "flex size-full items-center justify-center font-medium select-none border",
             outerRadiusClass,
-            isLarge ? "text-[13px] font-semibold" : "text-[11px]",
+            fontSizeClass,
             avatarColorClass,
           )}
         >

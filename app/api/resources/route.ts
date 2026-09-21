@@ -14,6 +14,7 @@ type DbResourceRow = {
   type: Resource["type"];
   pricing?: "Free" | "Freemium";
   is_recommended?: boolean;
+  upvotes?: number;
   category_id: string;
   created_by: string | null;
   created_at: string;
@@ -58,6 +59,7 @@ export async function GET() {
         type: r.type,
         pricing: r.pricing === "Free" ? "Free" : "Freemium",
         isRecommended: Boolean(r.is_recommended) || hasRecommendedTag,
+        upvotes: typeof r.upvotes === "number" ? r.upvotes : 0,
         categoryId: r.category_id || "",
         createdBy: r.created_by,
         createdAt: r.created_at,
@@ -244,6 +246,7 @@ export async function POST(request: Request) {
         isPublic: true,
         pricing: pricing === "Free" ? "Free" : "Freemium",
         isRecommended: Boolean(isRecommended),
+        upvotes: 0,
         tagIds: Array.isArray(tags) ? tags.filter((t: string) => t !== "admin-recommended") : [],
         saveCount: 0,
       };
@@ -264,6 +267,7 @@ export async function POST(request: Request) {
       created_by: createdBy || null,
       is_public: true,
       pricing: pricing || "Freemium",
+      upvotes: 0,
       created_at: now,
       updated_at: now,
     };
@@ -272,6 +276,13 @@ export async function POST(request: Request) {
     }
 
     let { error: insErr } = await supabase.from("resources").insert(insertData);
+
+    // If upvotes column doesn't exist yet, retry without upvotes
+    if (insErr && (insErr.message.includes("upvotes") || insErr.code === "42703")) {
+      delete insertData.upvotes;
+      const retry = await supabase.from("resources").insert(insertData);
+      insErr = retry.error;
+    }
 
     // If is_recommended column doesn't exist yet, retry without is_recommended
     if (insErr && (insErr.message.includes("is_recommended") || insErr.code === "42703")) {
@@ -384,21 +395,24 @@ export async function PATCH(request: Request) {
     }
     if (patch.isPublic !== undefined) updatePayload.is_public = patch.isPublic;
     if (patch.isRecommended !== undefined) updatePayload.is_recommended = patch.isRecommended;
+    if (patch.upvotes !== undefined) updatePayload.upvotes = patch.upvotes;
 
     let { error: updateErr } = await supabase
       .from("resources")
       .update(updatePayload)
       .eq("id", id);
 
-    // If pricing or is_recommended column doesn't exist yet, retry without them
+    // If pricing, is_recommended or upvotes column doesn't exist yet, retry without them
     if (
       updateErr &&
       (updateErr.message.includes("pricing") ||
         updateErr.message.includes("is_recommended") ||
+        updateErr.message.includes("upvotes") ||
         updateErr.code === "42703")
     ) {
       delete updatePayload.pricing;
       delete updatePayload.is_recommended;
+      delete updatePayload.upvotes;
       const retry = await supabase.from("resources").update(updatePayload).eq("id", id);
       updateErr = retry.error;
     }

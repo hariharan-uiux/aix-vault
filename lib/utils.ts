@@ -45,9 +45,13 @@ export function canonicalKey(url: string) {
   }
 }
 
-export function initials(name: string) {
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
+export function initials(name: string): string {
+  if (!name) return "??";
+  const clean = name.trim().replace(/^[^a-zA-Z0-9]+/, "");
+  const letters = clean.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
+  if (letters.length === 2) return letters;
+  if (letters.length === 1) return letters + (clean.slice(1, 2).toUpperCase() || letters);
+  return clean.slice(0, 2).toUpperCase() || "??";
 }
 
 export function faviconUrl(domain: string) {

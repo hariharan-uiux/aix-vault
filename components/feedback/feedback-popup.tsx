@@ -140,110 +140,135 @@ export function FeedbackPopup({ open, onClose }: FeedbackPopupProps) {
         aria-modal="true"
         aria-label="Suggest a tool or feature"
         className={cn(
-          "relative z-10 flex w-full max-w-md sm:max-w-lg flex-col gap-3.5",
-          "rounded-t-[20px] sm:rounded-t-[24px] border-t sm:border-x border-border/80 dark:border-white/12",
-          "bg-background dark:bg-[#121318] p-4 sm:p-6 shadow-2xl",
-          "max-h-[85dvh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]",
+          "relative z-10 flex w-full max-w-full sm:max-w-2xl md:max-w-3xl flex-col",
+          "rounded-t-xl border-t border-x border-black/10 dark:border-white/[0.14]",
+          "bg-background dark:bg-[#121318] shadow-[0_-12px_44px_rgba(0,0,0,0.25)] dark:shadow-[0_-12px_44px_rgba(0,0,0,0.7)]",
+          "max-h-[85dvh] overflow-hidden",
           isClosing ? "animate-drawer-out" : "animate-drawer-in",
         )}
       >
-        {/* Pull Handle */}
-        <div className="mx-auto -mt-1 mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 shrink-0" />
-        {/* Header with Title & Close button */}
-        <div className="flex items-center justify-between border-b border-border dark:border-white/10 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <Sparkles size={15} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                Suggest a Tool or Feature
+        <div className="flex w-full min-h-full">
+          {/* Main Content: Left Column (Identity) + Middle Column (Message Cell) */}
+          <div className="flex-1 min-w-0 flex flex-col sm:flex-row">
+            {/* Left Column: Identity */}
+            <div className="w-full sm:w-[220px] md:w-[250px] shrink-0 p-5 sm:p-6 flex flex-col text-center sm:text-left">
+              {/* Emerald Sparkles Icon */}
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mb-3.5 mx-auto sm:mx-0 border border-emerald-500/20">
+                <Sparkles size={20} />
+              </div>
+
+              {/* Title */}
+              <h2 className="text-[17px] sm:text-[19px] font-semibold tracking-tight text-foreground leading-snug">
+                Feedback & Ideas
               </h2>
-              <p className="text-[11px] text-muted-foreground">
-                Share your ideas directly with the creator
+
+              {/* Subtitle */}
+              <p className="mt-1 sm:mt-1.5 text-[12.5px] text-muted-foreground leading-relaxed">
+                Suggest new tools, request features, or share feedback directly with the creator.
               </p>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-6.5 items-center justify-center rounded-full text-muted-foreground hover:bg-subtle-background hover:text-foreground transition-colors cursor-pointer"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
-        </div>
 
-        {/* Content Body */}
-        {isSuccess ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center animate-in fade-in-0 zoom-in-95 duration-200">
-            <div className="flex size-11 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 mb-2.5">
-              <Check size={20} className="stroke-[2.5]" />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground">Feedback Sent!</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
-              Thank you for helping improve AIX Vault! Your suggestion has been delivered.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            {/* Text Enter Box */}
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="You can enter your feedbacks and features here"
-                rows={4}
-                required
-                disabled={isSubmitting}
-                className={cn(
-                  "w-full resize-none rounded-xl border border-border/80 bg-subtle-background/50 px-3.5 py-2.5 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/70",
-                  "focus:border-foreground/30 focus:bg-background focus:outline-none focus:ring-2 focus:ring-foreground/10",
-                  "transition-all duration-150 disabled:opacity-50"
-                )}
-                onKeyDown={(e) => {
-                  // Allow Command+Enter or Ctrl+Enter to submit
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    if (message.trim() && !isSubmitting) {
-                      handleSubmit(e);
-                    }
-                  }
-                }}
-              />
-            </div>
+            {/* Distinct vertical line between left and right division (Desktop) */}
+            <div className="hidden sm:block w-px bg-black/10 dark:bg-white/[0.14] shrink-0 self-stretch" />
 
-            {error && (
-              <p className="text-[11px] text-destructive font-medium px-0.5 animate-in fade-in">
-                {error}
-              </p>
-            )}
+            {/* Distinct horizontal line between top and bottom division (Mobile) */}
+            <div className="sm:hidden h-px w-full bg-black/10 dark:bg-white/[0.14] shrink-0" />
 
-            {/* Send Button Alone */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !message.trim()}
-              className={cn(
-                "inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer select-none",
-                "bg-foreground text-background shadow-sm hover:opacity-90 active:scale-[0.99]",
-                "disabled:pointer-events-none disabled:opacity-45"
-              )}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>Sending...</span>
-                </>
+            {/* Middle Column: Textarea Cell */}
+            <div className="flex-1 min-w-0 flex flex-col p-5 sm:p-6 text-left">
+              {isSuccess ? (
+                <div className="flex-1 flex flex-col items-center justify-center py-8 text-center animate-in fade-in-0 zoom-in-95 duration-200">
+                  <div className="flex size-11 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 mb-2.5">
+                    <Check size={20} className="stroke-[2.5]" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">Feedback Delivered!</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
+                    Thank you for helping improve AIX Vault. Your suggestion has been sent.
+                  </p>
+                </div>
               ) : (
-                <>
-                  <Send size={14} />
-                  <span>Send</span>
-                </>
+                <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 block select-none">
+                      Your Suggestion
+                    </span>
+                    <span className="hidden sm:inline text-[10.5px] text-muted-foreground/60 select-none">
+                      Press ⌘+Enter to send
+                    </span>
+                  </div>
+
+                  <textarea
+                    ref={textareaRef}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Describe a tool you'd like added, or any thoughts to improve the vault..."
+                    rows={4}
+                    required
+                    disabled={isSubmitting}
+                    className={cn(
+                      "w-full flex-1 resize-none rounded-xl border border-black/10 dark:border-white/10 bg-subtle-background/50 px-3.5 py-3 text-[12.5px] sm:text-[13px] text-foreground placeholder:text-muted-foreground/60",
+                      "focus:border-foreground/30 focus:bg-background focus:outline-none",
+                      "transition-all duration-150 disabled:opacity-50 min-h-[110px]"
+                    )}
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                        e.preventDefault();
+                        if (message.trim() && !isSubmitting) {
+                          handleSubmit(e);
+                        }
+                      }
+                    }}
+                  />
+
+                  {error && (
+                    <p className="text-[11.5px] text-destructive font-medium mt-2 px-0.5 animate-in fade-in">
+                      {error}
+                    </p>
+                  )}
+                </form>
               )}
-            </button>
-          </form>
-        )}
+            </div>
+          </div>
+
+          {/* Distinct vertical line before right action column */}
+          <div className="w-px bg-black/10 dark:bg-white/[0.14] shrink-0 self-stretch" />
+
+          {/* Right Column: Close & Send Actions (Last Column) */}
+          <div className="w-[52px] sm:w-14 md:w-16 shrink-0 bg-subtle-background/20 dark:bg-white/[0.015] self-stretch flex flex-col">
+            <div className="flex-1 flex flex-col items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-6">
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex size-9 sm:size-9.5 shrink-0 items-center justify-center rounded-full bg-subtle-background text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 border border-border/80 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                aria-label="Close popup"
+                title="Close"
+              >
+                <X size={15} />
+              </button>
+
+              {/* Send Button (Vertical Pill matching ResourceDrawer Open button) */}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !message.trim()}
+                className={cn(
+                  "flex w-9 sm:w-9.5 flex-1 min-h-12 items-center justify-center rounded-full transition-all shadow-xs active:scale-[0.96] cursor-pointer select-none",
+                  "bg-foreground text-background hover:bg-emerald-600 hover:text-white",
+                  "disabled:opacity-40 disabled:pointer-events-none"
+                )}
+                title="Send Feedback"
+                aria-label="Send Feedback"
+              >
+                {isSubmitting ? (
+                  <Loader2 size={15} className="animate-spin shrink-0" />
+                ) : (
+                  <Send size={15} className="shrink-0" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
