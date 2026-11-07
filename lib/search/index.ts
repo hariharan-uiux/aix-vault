@@ -1,12 +1,9 @@
 import type { Resource } from "@/types";
-import { categoryById, tagById, typeBySlug } from "@/lib/taxonomy";
+import { categoryById, typeBySlug } from "@/lib/taxonomy";
 
 function haystack(resource: Resource) {
   const category = categoryById(resource.categoryId);
   const type = typeBySlug(resource.type);
-  const tagNames = resource.tagIds
-    .map((id) => tagById(id)?.name ?? id)
-    .join(" ");
   return [
     resource.name,
     resource.description,
@@ -14,7 +11,6 @@ function haystack(resource: Resource) {
     resource.type,
     type?.name ?? "",
     category?.name ?? "",
-    tagNames,
   ]
     .join(" ")
     .toLowerCase();

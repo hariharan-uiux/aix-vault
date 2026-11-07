@@ -14,13 +14,6 @@ export type Category = {
   createdAt: string;
 };
 
-export type Tag = {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: string;
-};
-
 export type Resource = {
   id: string;
   name: string;
@@ -35,7 +28,6 @@ export type Resource = {
   createdAt: string;
   updatedAt: string;
   isPublic: boolean;
-  tagIds: string[];
   saveCount: number;
   pricing?: "Free" | "Freemium";
   isRecommended?: boolean;
@@ -72,7 +64,6 @@ export type Navigation =
 
 export type Filters = {
   type: string | null;
-  tagIds: string[];
   free: "free" | "freemium" | null;
   openSource: boolean;
   hasUpvotes?: boolean;

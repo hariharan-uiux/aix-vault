@@ -1,7 +1,7 @@
 import { canonicalKey } from "@/lib/utils";
 import type { Filters, Navigation, Resource, SortMode } from "@/types";
 import { matchesQuery, rankQuery } from "@/lib/search";
-import { categoryById, getResourcePricing, tagById } from "@/lib/taxonomy";
+import { categoryById, getResourcePricing } from "@/lib/taxonomy";
 import { PAGE_SIZE } from "@/lib/resources/schema";
 
 export function isDuplicate(resources: Resource[], url: string, ignoreId?: string) {
@@ -9,52 +9,6 @@ export function isDuplicate(resources: Resource[], url: string, ignoreId?: strin
   return resources.find(
     (resource) => resource.id !== ignoreId && canonicalKey(resource.url) === key,
   );
-}
-
-function resourceMatchesTag(resource: Resource, tagId: string): boolean {
-  if (resource.tagIds?.includes(tagId)) return true;
-  const tag = tagById(tagId);
-  const term = (tag?.slug || tagId).toLowerCase().trim();
-  if (!term) return false;
-
-  const name = (resource.name || "").toLowerCase();
-  const desc = (resource.description || "").toLowerCase();
-  const type = (resource.type || "").toLowerCase();
-  const cat = (resource.categoryId || "").toLowerCase();
-
-  // Keyword / slug matching
-  if (name.includes(term) || desc.includes(term) || type.includes(term) || cat.includes(term)) {
-    return true;
-  }
-
-  // Synonym / derivative matching
-  if (term === "react" && (name.includes("react") || desc.includes("react"))) return true;
-  if (
-    term === "components" &&
-    (type === "component-library" || type === "ui-kit" || desc.includes("component") || name.includes("ui"))
-  )
-    return true;
-  if (term === "icons" && (type === "icon-library" || desc.includes("icon"))) return true;
-  if (term === "typography" && (type === "font" || desc.includes("font") || desc.includes("type")))
-    return true;
-  if (term === "3d" && (type === "3d" || desc.includes("3d") || desc.includes("three.js") || desc.includes("webgl")))
-    return true;
-  if (term === "animation" && (type === "animation" || desc.includes("animat") || desc.includes("motion")))
-    return true;
-  if (
-    term === "ai" &&
-    (type.startsWith("ai") || desc.includes(" ai ") || desc.includes("artificial intelligence") || desc.includes("gpt"))
-  )
-    return true;
-  if (term === "figma" && (desc.includes("figma") || name.includes("figma"))) return true;
-  if (term === "design-system" && (type === "design-system" || desc.includes("design system")))
-    return true;
-  if (term === "css" && (desc.includes("css") || desc.includes("tailwind") || desc.includes("style")))
-    return true;
-  if (term === "web" && (cat.includes("development") || cat.includes("design") || desc.includes("web") || desc.includes("site")))
-    return true;
-
-  return false;
 }
 
 function isResourceInCategory(resource: Resource, targetCategoryId: string): boolean {
@@ -117,17 +71,8 @@ export function filterResources(options: {
     });
   }
 
-  if (filters.tagIds.length > 0) {
-    list = list.filter((resource) =>
-      filters.tagIds.some((tagId) => resourceMatchesTag(resource, tagId)),
-    );
-  }
-
   if (filters.free === "free") {
-    list = list.filter((resource) =>
-      resource.tagIds.some((id) => tagById(id)?.slug === "free") ||
-      getResourcePricing(resource) === "Free",
-    );
+    list = list.filter((resource) => getResourcePricing(resource) === "Free");
   } else if (filters.free === "freemium") {
     list = list.filter((resource) =>
       getResourcePricing(resource) === "Freemium",
@@ -135,9 +80,7 @@ export function filterResources(options: {
   }
 
   if (filters.openSource) {
-    list = list.filter((resource) =>
-      resource.tagIds.some((id) => tagById(id)?.slug === "open-source"),
-    );
+    list = list.filter((resource) => (resource.type || "").toLowerCase() === "open-source");
   }
 
   if (filters.hasUpvotes) {

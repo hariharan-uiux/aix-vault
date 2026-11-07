@@ -4,10 +4,10 @@ import { Drawer } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { SearchableDropdown } from "@/components/ui/searchable-dropdown";
 import { ResourceIcon } from "@/components/resources/resource-icon";
-import { categoryById, tags } from "@/lib/taxonomy";
+import { categoryById } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
 import { cn, cleanResourceName } from "@/lib/utils";
-import { ChevronDown, Loader2, Plus, Star, Tag, X } from "lucide-react";
+import { Loader2, Plus, Star, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type Meta = {
@@ -47,8 +47,6 @@ export function ResourceForm() {
   const [type, setType] = useState("tool");
   const [pricing, setPricing] = useState<"Free" | "Freemium">("Freemium");
   const [isRecommended, setIsRecommended] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tagsOpen, setTagsOpen] = useState(false);
   const [collectionId, setCollectionId] = useState(defaultCollectionId);
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,20 +56,11 @@ export function ResourceForm() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth >= 640) {
-      setTagsOpen(true);
-    }
-  }, []);
-
-  useEffect(() => {
     if (addOpen) {
       if (navigation.kind === "category") {
         setCategoryId(navigation.categoryId);
       } else if (navigation.kind === "collection") {
         setCollectionId(navigation.collectionId);
-      }
-      if (typeof window !== "undefined" && window.innerWidth < 640) {
-        setTagsOpen(false);
       }
     }
   }, [addOpen, navigation]);
@@ -169,7 +158,6 @@ export function ResourceForm() {
     setType("tool");
     setPricing("Freemium");
     setIsRecommended(false);
-    setSelectedTags([]);
     setCollectionId(defaultCollectionId);
     setIconUrl(null);
     setError(null);
@@ -207,7 +195,6 @@ export function ResourceForm() {
               categoryId,
               type,
               pricing,
-              tags: selectedTags,
               collectionId: collectionId || undefined,
               isRecommended,
             });
@@ -224,7 +211,7 @@ export function ResourceForm() {
         }}
         className="flex flex-col sm:flex-row w-full min-h-full"
       >
-        {/* Main Content: Left Column (Identity Preview, URL, Name, Description) + Right Column (Details & Tags) */}
+        {/* Main Content: Left Column (Identity Preview, URL, Name, Description) + Right Column (Details) */}
         <div className="flex-1 min-w-0 flex flex-col sm:flex-row overflow-y-auto overscroll-contain">
           {/* Left Column: Identity Preview, URL, Name & Description */}
           <div className="w-full sm:w-[310px] md:w-[340px] shrink-0 p-4 sm:p-5 md:p-6 flex flex-col text-left">
@@ -340,7 +327,7 @@ export function ResourceForm() {
           {/* Distinct horizontal line between top and bottom division (Mobile) */}
           <div className="sm:hidden h-px w-full bg-black/10 dark:bg-white/[0.14] shrink-0" />
 
-          {/* Right Column: Details & Tags */}
+          {/* Right Column: Details */}
           <div className="flex-1 min-w-0 flex flex-col">
             {/* 1. Details Cell */}
             <div className="p-4 sm:p-5 md:p-6 text-left">
@@ -433,110 +420,6 @@ export function ResourceForm() {
 
             {/* Distinct divider line */}
             <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] shrink-0" />
-
-            {/* 2. Tags Cell (Collapsible) */}
-            <div className="p-4 sm:p-5 md:p-6 text-left pb-5 sm:pb-6">
-              <div className="flex items-center justify-between mb-2">
-                <button
-                  type="button"
-                  onClick={() => setTagsOpen((prev) => !prev)}
-                  className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-foreground transition-colors cursor-pointer select-none group"
-                  aria-expanded={tagsOpen}
-                >
-                  <Tag size={11} className="text-muted-foreground/80 group-hover:text-foreground" />
-                  <span>Tags</span>
-                  {selectedTags.length > 0 && (
-                    <span className="text-orange-600 dark:text-orange-400 font-semibold">
-                      ({selectedTags.length})
-                    </span>
-                  )}
-                  <ChevronDown
-                    size={12}
-                    className={cn(
-                      "transition-transform duration-200 text-muted-foreground group-hover:text-foreground",
-                      tagsOpen ? "rotate-180" : "rotate-0",
-                    )}
-                  />
-                </button>
-                <div className="flex items-center gap-2">
-                  {selectedTags.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedTags([]);
-                      }}
-                      className="text-[10.5px] text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setTagsOpen((prev) => !prev)}
-                    className="text-[10.5px] font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 cursor-pointer select-none"
-                  >
-                    {tagsOpen ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Collapsed view preview: show selected tag pills */}
-              {!tagsOpen && selectedTags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {selectedTags.map((tagId) => {
-                    const tag = tags.find((t) => t.id === tagId);
-                    if (!tag) return null;
-                    return (
-                      <span
-                        key={tagId}
-                        className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 border border-orange-500/30 px-3 py-1 text-[12px] sm:text-[12.5px] font-medium text-orange-700 dark:text-orange-300"
-                      >
-                        {tag.name}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelectedTags((current) => current.filter((id) => id !== tagId))
-                          }
-                          className="hover:text-red-500 cursor-pointer ml-0.5"
-                          aria-label={`Remove ${tag.name}`}
-                        >
-                          <X size={11} />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Expanded view: full tags palette */}
-              {tagsOpen && (
-                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-0.5">
-                  {tags.map((tag) => {
-                    const active = selectedTags.includes(tag.id);
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedTags((current) =>
-                            active ? current.filter((id) => id !== tag.id) : [...current, tag.id],
-                          )
-                        }
-                        className={cn(
-                          "rounded-full px-3 py-1 text-[12px] sm:text-[12.5px] font-medium transition-all cursor-pointer select-none",
-                          active
-                            ? "bg-orange-500 font-semibold text-white"
-                            : "border border-black/10 dark:border-white/10 bg-background text-muted-foreground hover:border-orange-500/40 hover:text-orange-500",
-                        )}
-                      >
-                        {tag.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
             {/* Error Message */}
             {error && (

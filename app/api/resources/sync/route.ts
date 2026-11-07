@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient, getSupabaseClient } from "@/lib/supabase/client";
 import { slugify, domainFromUrl, normalizeUrl } from "@/lib/utils";
+import { autoFileResource } from "@/lib/collections/auto-file";
 import type { Resource } from "@/types";
 
 async function ensureCategory(supabase: ReturnType<typeof getSupabaseAdminClient>, categoryId: string) {
@@ -27,26 +28,6 @@ async function ensureCategory(supabase: ReturnType<typeof getSupabaseAdminClient
       description: name,
       parent_id: parentId,
     });
-  }
-}
-
-async function ensureTags(supabase: ReturnType<typeof getSupabaseAdminClient>, tagIds: string[]) {
-  if (!supabase || !Array.isArray(tagIds) || tagIds.length === 0) return;
-  const { data: existingTags } = await supabase
-    .from("tags")
-    .select("id")
-    .in("id", tagIds);
-
-  const existingIds = new Set((existingTags || []).map((t) => t.id));
-  const missing = tagIds.filter((t) => !existingIds.has(t));
-
-  if (missing.length > 0) {
-    const rows = missing.map((t) => ({
-      id: t,
-      name: t,
-      slug: slugify(t) || t,
-    }));
-    await supabase.from("tags").insert(rows);
   }
 }
 
@@ -81,10 +62,6 @@ export async function POST(request: Request) {
 
         const categoryId = item.categoryId || "development";
         await ensureCategory(supabase, categoryId);
-
-        if (Array.isArray(item.tagIds) && item.tagIds.length > 0) {
-          await ensureTags(supabase, item.tagIds);
-        }
 
         const resourceId = item.id || crypto.randomUUID();
         const domain = item.domain || domainFromUrl(normalizedUrl);
@@ -144,11 +121,15 @@ export async function POST(request: Request) {
           continue;
         }
 
-        if (Array.isArray(item.tagIds) && item.tagIds.length > 0) {
-          await supabase.from("resource_tags").delete().eq("resource_id", targetId);
-          await supabase.from("resource_tags").insert(
-            item.tagIds.map((tid: string) => ({ resource_id: targetId, tag_id: tid })),
-          );
+        try {
+          await autoFileResource({
+            id: targetId,
+            type: item.type,
+            categoryId,
+            url: normalizedUrl,
+          });
+        } catch (fileErr) {
+          console.error("[api/resources/sync] Auto-file failed:", fileErr);
         }
 
         syncedCount++;

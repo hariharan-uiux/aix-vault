@@ -7,8 +7,6 @@ import { SearchableDropdown } from "@/components/ui/searchable-dropdown";
 import {
   categoryById,
   getResourcePricing,
-  tagById,
-  tags,
   typeBySlug,
 } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
@@ -41,7 +39,6 @@ export function ResourceDrawer() {
 
   const [copied, setCopied] = useState(false);
   const [collectionId, setCollectionId] = useState("");
-  const [showTagPicker, setShowTagPicker] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [formName, setFormName] = useState("");
@@ -143,15 +140,6 @@ export function ResourceDrawer() {
   const category = categoryById(selected.categoryId);
   const resourceType = typeBySlug(selected.type);
   const currentPricing = getResourcePricing(selected);
-
-  const handleToggleTag = (tagId: string) => {
-    if (!isAdmin) return;
-    const currentTags = selected.tagIds || [];
-    const nextTags = currentTags.includes(tagId)
-      ? currentTags.filter((t) => t !== tagId)
-      : [...currentTags, tagId];
-    updateResource(selected.id, { tagIds: nextTags });
-  };
 
   const handleStartEdit = () => {
     if (!selected) return;
@@ -561,75 +549,7 @@ export function ResourceDrawer() {
             </div>
           </div>
 
-          {/* 3. Tags Cell (Admin only) */}
-          {isAdmin && (
-            <>
-              <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] shrink-0" />
-              <div className="p-5 sm:p-6 text-left">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                    Tags
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowTagPicker(!showTagPicker)}
-                    className="text-[11px] font-medium text-orange-500 dark:text-orange-400 hover:text-orange-600 dark:hover:text-orange-300 hover:underline cursor-pointer transition-colors"
-                  >
-                    {showTagPicker ? "Done" : "+ Add Tag"}
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {selected.tagIds && selected.tagIds.length > 0 ? (
-                    selected.tagIds.map((id) => (
-                      <span
-                        key={id}
-                        onClick={() => handleToggleTag(id)}
-                        className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 bg-subtle-background px-3 py-1 text-[12px] sm:text-[12.5px] font-medium text-foreground hover:border-orange-500/50 hover:text-orange-500 cursor-pointer group transition-colors"
-                        title="Click to remove tag"
-                      >
-                        <span>{tagById(id)?.name ?? id}</span>
-                        <X
-                          size={11}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        />
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[12px] text-subtle-foreground italic">No tags assigned</span>
-                  )}
-                </div>
-
-                {/* Quick Tag Palette for Admin */}
-                {showTagPicker && (
-                  <div className="mt-3 rounded-xl border border-black/10 dark:border-white/10 bg-subtle-background/50 p-2.5">
-                    <div className="flex max-h-32 flex-wrap gap-1 overflow-y-auto">
-                      {tags.map((tag) => {
-                        const isAssigned = (selected.tagIds || []).includes(tag.id);
-                        return (
-                          <button
-                            key={tag.id}
-                            type="button"
-                            onClick={() => handleToggleTag(tag.id)}
-                            className={cn(
-                              "rounded-full px-3 py-1 text-[12px] sm:text-[12.5px] font-medium transition-all cursor-pointer select-none",
-                              isAssigned
-                                ? "bg-orange-500 font-semibold text-white"
-                                : "border border-black/10 dark:border-white/10 bg-background text-muted-foreground hover:border-orange-500/40 hover:text-orange-500",
-                            )}
-                          >
-                            {tag.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* 4. Collection Cell (Admin only) */}
+          {/* 3. Collection Cell (Admin only) */}
           {isAdmin && collections.length > 0 && (
             <>
               <div className="h-px w-full bg-black/10 dark:bg-white/[0.14] shrink-0" />

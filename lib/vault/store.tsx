@@ -201,7 +201,7 @@ function readInitialUrl(): {
     return {
       navigation: { kind: "all" },
       search: "",
-      filters: { type: null, tagIds: [], free: null, openSource: false },
+      filters: { type: null, free: null, openSource: false },
       view: "grid",
       sort: "upvotes",
     };
@@ -211,7 +211,6 @@ function readInitialUrl(): {
   const collection = params.get("collection");
   const category = params.get("category");
   const query = params.get("search") ?? params.get("q") ?? "";
-  const tag = params.get("tag");
   const viewParam = params.get("view");
   const sortParam = params.get("sort");
   const platformParam = params.get("platform");
@@ -227,7 +226,6 @@ function readInitialUrl(): {
   else if (category) navigation = { kind: "category", categoryId: category };
   const filters: Filters = {
     type: null,
-    tagIds: tag ? [tag] : [],
     free: null,
     openSource: false,
   };
@@ -322,51 +320,6 @@ type VaultContextValue = {
 
 const VaultContext = createContext<VaultContextValue | null>(null);
 
-function enrichResourceTags(resource: Resource): string[] {
-  const tags = new Set<string>(resource.tagIds || []);
-  const text = `${resource.name} ${resource.description || ""} ${resource.type || ""} ${resource.categoryId || ""}`.toLowerCase();
-
-  if (text.includes("react")) tags.add("react");
-  if (text.includes("figma")) tags.add("figma");
-  if (resource.type === "3d" || text.includes("3d") || text.includes("three.js")) tags.add("3d");
-  if (
-    resource.type === "component-library" ||
-    resource.type === "ui-kit" ||
-    text.includes("component")
-  )
-    tags.add("components");
-  if (resource.type === "icon-library" || text.includes("icon")) tags.add("icons");
-  if (resource.type === "font" || text.includes("font") || text.includes("typeface"))
-    tags.add("typography");
-  if (resource.type === "animation" || text.includes("animat") || text.includes("motion"))
-    tags.add("animation");
-  if (
-    resource.type?.startsWith("ai") ||
-    text.includes(" ai ") ||
-    text.includes("artificial intelligence") ||
-    text.includes("gpt")
-  )
-    tags.add("ai");
-  if (resource.type === "design-system" || text.includes("design system"))
-    tags.add("design-system");
-  if (text.includes("tailwind") || text.includes("css")) tags.add("css");
-  if (text.includes("saas")) tags.add("saas");
-  if (text.includes("mobile")) tags.add("mobile");
-  if (text.includes("minimal")) tags.add("minimal");
-  if (resource.type === "illustration" || text.includes("illustration"))
-    tags.add("illustration");
-  if (resource.type === "color" || text.includes("color") || text.includes("palette"))
-    tags.add("color");
-  if (text.includes("photo") || text.includes("unsplash")) tags.add("photos");
-  if (text.includes("productivity") || text.includes("workflow")) tags.add("productivity");
-  if (text.includes("collaboration") || text.includes("collaborative"))
-    tags.add("collaboration");
-  if (text.includes("prototype") || text.includes("prototyping")) tags.add("prototype");
-  if (text.includes("research")) tags.add("research");
-
-  return Array.from(tags);
-}
-
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [extras, setExtras] = useState<Resource[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -385,7 +338,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [lastCategoryNav, setLastCategoryNav] = useState<Navigation>({ kind: "all" });
   const [search, setSearch] = useState("");
   const [deferredSearch, setDeferredSearch] = useState("");
-  const [filters, setFilters] = useState<Filters>({ type: null, tagIds: [], free: null, openSource: false });
+  const [filters, setFilters] = useState<Filters>({ type: null, free: null, openSource: false });
   const [sort, setSort] = useState<SortMode>("upvotes");
   const [view, setView] = useState<ViewMode>("grid");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -587,10 +540,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         try {
           const { data: resData, error } = await supabase
             .from("resources")
-            .select(`
-              *,
-              resource_tags ( tag_id )
-            `)
+            .select("*")
             .order("created_at", { ascending: false });
 
           if (!error && resData) {
@@ -608,13 +558,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
               created_at: string;
               updated_at: string;
               is_public: boolean;
-              resource_tags?: { tag_id: string }[];
             };
             fetchedResources = (resData as unknown as Row[]).map((r) => {
-              const rawTags = Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [];
-              const hasRecommendedTag = rawTags.includes("admin-recommended");
-              const cleanTags = rawTags.filter((t) => t !== "admin-recommended");
-
               return {
                 id: r.id,
                 name: r.name,
@@ -629,10 +574,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
                 createdAt: r.created_at,
                 updatedAt: r.updated_at,
                 isPublic: r.is_public,
-                tagIds: cleanTags,
                 saveCount: 0,
                 pricing: (r as unknown as Record<string, unknown>).pricing === "Free" ? "Free" : "Freemium",
-                isRecommended: Boolean((r as unknown as Record<string, unknown>).is_recommended) || hasRecommendedTag,
+                isRecommended: Boolean((r as unknown as Record<string, unknown>).is_recommended),
                 upvotes: typeof (r as unknown as Record<string, unknown>).upvotes === "number" ? Number((r as unknown as Record<string, unknown>).upvotes) : 0,
               };
             });
@@ -798,29 +742,27 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           for (const cat of dbCats) {
             registerCategory(cat);
           }
-          // Merge: local taxonomy defaults + DB categories + localStorage custom categories
-          setCategoriesState((prev) => {
-            // Read deleted category IDs from localStorage
-            let deletedCatIds: string[] = [];
-            try {
-              const raw = window.localStorage.getItem(STORAGE_KEY);
-              if (raw) {
-                const parsed = JSON.parse(raw);
-                deletedCatIds = Array.isArray(parsed.deletedCategoryIds) ? parsed.deletedCategoryIds : [];
+          // The database is the single source of truth for categories, so stale
+          // browser-local categories cannot reappear in the picker.
+          const dbIds = new Set(dbCats.map((c) => c.id));
+          setCategoriesState(() =>
+            dbCats.filter(
+              (c, i) => dbCats.findIndex((x) => x.id === c.id || x.name.toLowerCase() === c.name.toLowerCase()) === i,
+            ),
+          );
+
+          // Drop local copies that no longer exist in the database.
+          try {
+            const raw = window.localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const customCats = Array.isArray(parsed.customCategories) ? parsed.customCategories : [];
+              const kept = customCats.filter((c: Category) => dbIds.has(c.id));
+              if (kept.length !== customCats.length) {
+                window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...parsed, customCategories: kept }));
               }
-            } catch {}
-            const deletedSet = new Set(deletedCatIds);
-            // Start with existing local categories
-            const merged = new Map<string, Category>();
-            for (const c of prev) {
-              if (!deletedSet.has(c.id)) merged.set(c.id, c);
             }
-            // Overlay DB categories (they take precedence)
-            for (const c of dbCats) {
-              if (!deletedSet.has(c.id)) merged.set(c.id, c);
-            }
-            return Array.from(merged.values());
-          });
+          } catch {}
         }
       }
     } catch {
@@ -1335,7 +1277,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       ...resource,
       categoryId: resource.categoryId || "",
       isRecommended: Boolean(resource.isRecommended) || recommendedIds.includes(resource.id),
-      tagIds: enrichResourceTags(resource),
       saveCount: saveCounts[resource.id] ?? resource.saveCount,
       upvotes: upvoteCounts[resource.id] !== undefined ? upvoteCounts[resource.id] : (resource.upvotes ?? 0),
     }));
@@ -1467,12 +1408,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       }
       const now = new Date().toISOString();
       const id = crypto.randomUUID();
-      const finalTags =
-        data.pricing === "Free"
-          ? data.tags.includes("free")
-            ? data.tags
-            : [...data.tags, "free"]
-          : data.tags.filter((t) => t !== "free");
 
       const resource: Resource = {
         id,
@@ -1488,7 +1423,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         createdAt: now,
         updatedAt: now,
         isPublic: true,
-        tagIds: finalTags,
         saveCount: 0,
         pricing: data.pricing ?? "Freemium",
         isRecommended: Boolean(data.isRecommended),
@@ -1508,7 +1442,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             categoryId: data.categoryId,
             type: data.type,
             pricing: data.pricing ?? "Freemium",
-            tags: finalTags,
             collectionId: data.collectionId || undefined,
             createdBy: currentUser?.id || undefined,
             isRecommended: Boolean(data.isRecommended),
@@ -1529,6 +1462,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           }
           setToast("Resource added & synced.");
           await refreshResources(false);
+          await refreshCollections();
           broadcastSync();
           return { ok: true as const };
         } else {
@@ -1543,7 +1477,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         return { ok: false as const, error: errMsg };
       }
     },
-    [currentUser, isAdmin, resources, refreshResources, broadcastSync],
+    [currentUser, isAdmin, resources, refreshResources, refreshCollections, broadcastSync],
   );
 
   const updateResource = useCallback(
@@ -2261,12 +2195,14 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedType),
-      }).catch((e) => console.warn("Could not sync resource type edit:", e));
+      })
+        .then(() => refreshCollections())
+        .catch((e) => console.warn("Could not sync resource type edit:", e));
 
       setToast(`Tool type renamed to "${trimmed}".`);
       broadcastSync();
     },
-    [isAdmin, broadcastSync],
+    [isAdmin, refreshCollections, broadcastSync],
   );
 
   const syncLocalToCloud = useCallback(async () => {

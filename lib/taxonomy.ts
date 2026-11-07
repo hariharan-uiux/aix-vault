@@ -1,4 +1,4 @@
-import type { Category, ResourceType, Tag } from "@/types";
+import type { Category, ResourceType } from "@/types";
 
 const now = "2026-01-01T00:00:00.000Z";
 
@@ -76,66 +76,15 @@ export const categories: Category[] = [
   top("development", "Developer Tools", "Libraries, APIs, frameworks, and developer tools"),
   top("design", "Design Tools", "UI/UX, design systems, typography, icons, and visual craft"),
   ...[
-    "Developer Tools",
-    "React",
-    "Vue",
-    "CSS",
-    "JavaScript",
-    "Components",
-    "Libraries",
     "APIs",
+    "Libraries",
     "Open Source",
-    "AI Tools",
-    "Documentation",
   ].map((name) => child("development", name)),
   ...[
-    "UI/UX",
-    "Design Systems",
+    "Components",
     "Typography",
-    "Icons",
-    "Colors",
-    "Illustration",
-    "3D",
-    "Motion",
-    "Branding",
-    "AI Design",
-    "Inspiration",
-    "Assets",
   ].map((name) => child("design", name)),
 ];
-
-const tagNames = [
-  "minimal",
-  "free",
-  "open-source",
-  "figma",
-  "react",
-  "saas",
-  "mobile",
-  "web",
-  "productivity",
-  "typography",
-  "icons",
-  "animation",
-  "3d",
-  "ai",
-  "design-system",
-  "components",
-  "css",
-  "collaboration",
-  "prototype",
-  "photos",
-  "color",
-  "research",
-  "illustration",
-];
-
-export const tags: Tag[] = tagNames.map((name) => ({
-  id: name,
-  name,
-  slug: name,
-  createdAt: now,
-}));
 
 const dynamicCategories = new Map<string, Category>();
 const deletedCategories = new Set<string>();
@@ -216,10 +165,6 @@ export function typeBySlug(slug: string) {
   return dynamicTypes.get(slug) ?? resourceTypes.find((type) => type.slug === slug);
 }
 
-export function tagById(id: string) {
-  return tags.find((tag) => tag.id === id);
-}
-
 const FREE_RESOURCE_IDS = new Set([
   "shadcn-ui",
   "radix-ui",
@@ -243,10 +188,9 @@ const FREE_RESOURCE_IDS = new Set([
 ]);
 
 
-export function getResourcePricing(resource: { id?: string; tagIds?: string[]; type?: string; pricing?: "Free" | "Freemium" }): "Free" | "Freemium" {
+export function getResourcePricing(resource: { id?: string; type?: string; pricing?: "Free" | "Freemium" }): "Free" | "Freemium" {
   if (resource.pricing === "Free" || resource.pricing === "Freemium") return resource.pricing;
   if (resource.id && FREE_RESOURCE_IDS.has(resource.id)) return "Free";
-  if (resource.tagIds?.includes("free") && !resource.tagIds?.includes("saas")) return "Free";
   if (resource.type === "font" || resource.type === "article" || resource.type === "icon-library") return "Free";
   return "Freemium";
 }

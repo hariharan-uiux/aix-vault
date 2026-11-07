@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient, getSupabaseClient } from "@/lib/supabase/client";
 import { slugify, domainFromUrl, normalizeUrl } from "@/lib/utils";
+import { autoFileResource } from "@/lib/collections/auto-file";
 import type { Resource } from "@/types";
 
 type DbResourceRow = {
@@ -20,7 +21,6 @@ type DbResourceRow = {
   created_at: string;
   updated_at: string;
   is_public: boolean;
-  resource_tags?: { tag_id: string }[];
 };
 
 export async function GET() {
@@ -32,10 +32,7 @@ export async function GET() {
   try {
     const { data: resData, error } = await supabase
       .from("resources")
-      .select(`
-        *,
-        resource_tags ( tag_id )
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -44,10 +41,6 @@ export async function GET() {
     }
 
     const mapped: Resource[] = ((resData as unknown as DbResourceRow[]) || []).map((r) => {
-      const rawTags = Array.isArray(r.resource_tags) ? r.resource_tags.map((t) => t.tag_id) : [];
-      const hasRecommendedTag = rawTags.includes("admin-recommended");
-      const cleanTags = rawTags.filter((t) => t !== "admin-recommended");
-
       return {
         id: r.id,
         name: r.name,
@@ -58,14 +51,13 @@ export async function GET() {
         iconUrl: r.icon_url,
         type: r.type,
         pricing: r.pricing === "Free" ? "Free" : "Freemium",
-        isRecommended: Boolean(r.is_recommended) || hasRecommendedTag,
+        isRecommended: Boolean(r.is_recommended),
         upvotes: typeof r.upvotes === "number" ? r.upvotes : 0,
         categoryId: r.category_id || "",
         createdBy: r.created_by,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
         isPublic: r.is_public,
-        tagIds: cleanTags,
         saveCount: 0,
       };
     });
@@ -105,26 +97,6 @@ async function ensureCategory(supabase: ReturnType<typeof getSupabaseAdminClient
   }
 }
 
-async function ensureTags(supabase: ReturnType<typeof getSupabaseAdminClient>, tagIds: string[]) {
-  if (!supabase || !Array.isArray(tagIds) || tagIds.length === 0) return;
-  const { data: existingTags } = await supabase
-    .from("tags")
-    .select("id")
-    .in("id", tagIds);
-
-  const existingIds = new Set((existingTags || []).map((t) => t.id));
-  const missing = tagIds.filter((t) => !existingIds.has(t));
-
-  if (missing.length > 0) {
-    const rows = missing.map((t) => ({
-      id: t,
-      name: t,
-      slug: slugify(t) || t,
-    }));
-    await supabase.from("tags").insert(rows);
-  }
-}
-
 export async function POST(request: Request) {
   const supabase = getSupabaseAdminClient() || getSupabaseClient();
   if (!supabase) {
@@ -133,7 +105,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { id, name, description, url, categoryId, type, tags, collectionId, createdBy, pricing, isRecommended } = body;
+    const { id, name, description, url, categoryId, type, collectionId, createdBy, pricing, isRecommended } = body;
 
     if (!name || !url || !categoryId || !type) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
@@ -222,27 +194,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: false, error: updateErr.message }, { status: 400 });
       }
 
-      if (Array.isArray(tags)) {
-        const finalTagsToSync = tags.filter((t: string) => t !== "admin-recommended");
-        if (isRecommended) {
-          finalTagsToSync.push("admin-recommended");
-        }
-        await ensureTags(supabase, finalTagsToSync);
-        await supabase.from("resource_tags").delete().eq("resource_id", targetId);
-        if (finalTagsToSync.length > 0) {
-          await supabase.from("resource_tags").insert(
-            finalTagsToSync.map((tid: string) => ({ resource_id: targetId, tag_id: tid })),
-          );
-        }
-      } else if (isRecommended !== undefined) {
-        if (isRecommended) {
-          await ensureTags(supabase, ["admin-recommended"]);
-          await supabase.from("resource_tags").upsert({ resource_id: targetId, tag_id: "admin-recommended" });
-        } else {
-          await supabase.from("resource_tags").delete().eq("resource_id", targetId).eq("tag_id", "admin-recommended");
-        }
-      }
-
       const updatedResource: Resource = {
         id: targetId,
         name,
@@ -260,7 +211,6 @@ export async function POST(request: Request) {
         pricing: pricing === "Free" ? "Free" : "Freemium",
         isRecommended: Boolean(isRecommended),
         upvotes: 0,
-        tagIds: Array.isArray(tags) ? tags.filter((t: string) => t !== "admin-recommended") : [],
         saveCount: 0,
       };
 
@@ -321,23 +271,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: insErr.message }, { status: 400 });
     }
 
-    // Insert Tags
-    const tagsToInsert = Array.isArray(tags) ? tags.filter((t: string) => t !== "admin-recommended") : [];
-    if (isRecommended) {
-      tagsToInsert.push("admin-recommended");
-    }
-    if (tagsToInsert.length > 0) {
-      await ensureTags(supabase, tagsToInsert);
-      const tagRows = tagsToInsert.map((tid: string) => ({
-        resource_id: resourceId,
-        tag_id: tid,
-      }));
-      const { error: tagErr } = await supabase.from("resource_tags").insert(tagRows);
-      if (tagErr) {
-        console.warn("[api/resources POST] Tag insert error:", tagErr);
-      }
-    }
-
     // Insert into Collection if specified
     if (collectionId) {
       const { error: collErr } = await supabase.from("collection_resources").insert({
@@ -347,6 +280,19 @@ export async function POST(request: Request) {
       if (collErr) {
         console.warn("[api/resources POST] Collection resource insert error:", collErr);
       }
+    }
+
+    // Auto-file into its type folder (created on demand). Filing must never fail the create.
+    let autoFolder: string | null = null;
+    try {
+      autoFolder = await autoFileResource({
+        id: resourceId,
+        type,
+        categoryId,
+        url: normalizedUrl,
+      });
+    } catch (fileErr) {
+      console.error("[api/resources POST] Auto-file failed:", fileErr);
     }
 
     const createdResource: Resource = {
@@ -365,11 +311,10 @@ export async function POST(request: Request) {
       isPublic: true,
       pricing: pricing === "Free" ? "Free" : "Freemium",
       isRecommended: Boolean(isRecommended),
-      tagIds: Array.isArray(tags) ? tags.filter((t: string) => t !== "admin-recommended") : [],
       saveCount: 0,
     };
 
-    return NextResponse.json({ ok: true, resource: createdResource });
+    return NextResponse.json({ ok: true, resource: createdResource, folder: autoFolder });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     console.error("[api/resources POST] Unexpected error:", err);
@@ -452,43 +397,25 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ ok: false, error: updateErr.message }, { status: 400 });
     }
 
-    // Update tags if provided or recommendation tag
-    if (Array.isArray(patch.tagIds)) {
-      const { data: existingRecTag } = await supabase
-        .from("resource_tags")
-        .select("tag_id")
-        .eq("resource_id", id)
-        .eq("tag_id", "admin-recommended")
+    // A type change moves the resource to the matching type folder.
+    if (patch.type !== undefined || patch.categoryId !== undefined) {
+      const { data: updated } = await supabase
+        .from("resources")
+        .select("id, type, category_id, url")
+        .eq("id", id)
         .maybeSingle();
 
-      const shouldBeRecommended =
-        patch.isRecommended !== undefined ? Boolean(patch.isRecommended) : Boolean(existingRecTag);
-
-      const finalTagsToSync = patch.tagIds.filter((t: string) => t !== "admin-recommended");
-      if (shouldBeRecommended) {
-        finalTagsToSync.push("admin-recommended");
-      }
-
-      await ensureTags(supabase, finalTagsToSync);
-      await supabase.from("resource_tags").delete().eq("resource_id", id);
-      if (finalTagsToSync.length > 0) {
-        await supabase.from("resource_tags").insert(
-          finalTagsToSync.map((tid: string) => ({ resource_id: id, tag_id: tid })),
-        );
-      }
-    } else if (patch.isRecommended !== undefined) {
-      if (patch.isRecommended) {
-        await ensureTags(supabase, ["admin-recommended"]);
-        await supabase.from("resource_tags").upsert({
-          resource_id: id,
-          tag_id: "admin-recommended",
-        });
-      } else {
-        await supabase
-          .from("resource_tags")
-          .delete()
-          .eq("resource_id", id)
-          .eq("tag_id", "admin-recommended");
+      if (updated) {
+        try {
+          await autoFileResource({
+            id: updated.id,
+            type: updated.type,
+            categoryId: updated.category_id,
+            url: updated.url,
+          });
+        } catch (fileErr) {
+          console.error("[api/resources PATCH] Auto-file failed:", fileErr);
+        }
       }
     }
 

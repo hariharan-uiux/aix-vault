@@ -1,4 +1,4 @@
--- AIX Vault Seed Script for Supabase
+﻿-- AIX Vault Seed Script for Supabase
 -- Run this in Supabase SQL Editor after 001_init.sql and 002_admin_roles.sql
 
 -- 1. Insert Categories
@@ -30,34 +30,7 @@ insert into public.categories (id, name, slug, description, parent_id) values
   ('design-assets', 'Assets', 'design-assets', 'Assets', 'design')
 on conflict (id) do nothing;
 
--- 2. Insert Tags
-insert into public.tags (id, name, slug) values
-  ('minimal', 'minimal', 'minimal'),
-  ('free', 'free', 'free'),
-  ('open-source', 'open-source', 'open-source'),
-  ('figma', 'figma', 'figma'),
-  ('react', 'react', 'react'),
-  ('saas', 'saas', 'saas'),
-  ('mobile', 'mobile', 'mobile'),
-  ('web', 'web', 'web'),
-  ('productivity', 'productivity', 'productivity'),
-  ('typography', 'typography', 'typography'),
-  ('icons', 'icons', 'icons'),
-  ('animation', 'animation', 'animation'),
-  ('3d', '3d', '3d'),
-  ('ai', 'ai', 'ai'),
-  ('design-system', 'design-system', 'design-system'),
-  ('components', 'components', 'components'),
-  ('css', 'css', 'css'),
-  ('collaboration', 'collaboration', 'collaboration'),
-  ('prototype', 'prototype', 'prototype'),
-  ('photos', 'photos', 'photos'),
-  ('color', 'color', 'color'),
-  ('research', 'research', 'research'),
-  ('illustration', 'illustration', 'illustration')
-on conflict (id) do nothing;
-
--- 3. Insert Collections
+-- 2. Insert Collections
 insert into public.collections (id, name, slug, description) values
   ('ui-tools', 'UI Tools', 'ui-tools', 'Interface design, component libraries, and visual craft'),
   ('ai-tools', 'AI Tools', 'ai-tools', 'Artificial intelligence, generative models, and copilots'),
@@ -67,7 +40,7 @@ insert into public.collections (id, name, slug, description) values
   ('productivity', 'Productivity', 'productivity', 'Workspace apps, task management, and workflow tools')
 on conflict (id) do nothing;
 
--- 4. Insert Resources
+-- 3. Insert Resources
 insert into public.resources (id, name, slug, description, url, domain, type, category_id, is_public) values
   ('figma', 'Figma', 'figma', 'Design and collaboration platform', 'https://www.figma.com', 'figma.com', 'tool', 'design-ui-ux', true),
   ('framer', 'Framer', 'framer', 'Design and publish production websites', 'https://www.framer.com', 'framer.com', 'tool', 'design-ui-ux', true),
@@ -111,109 +84,7 @@ insert into public.resources (id, name, slug, description, url, domain, type, ca
   ('css-tricks', 'CSS-Tricks', 'css-tricks', 'Guides and articles for CSS and front-end', 'https://css-tricks.com', 'css-tricks.com', 'article', 'development-documentation', true)
 on conflict (id) do nothing;
 
--- 5. Insert Resource Tags
-insert into public.resource_tags (resource_id, tag_id) values
-  ('figma', 'figma'),
-  ('figma', 'collaboration'),
-  ('figma', 'prototype'),
-  ('figma', 'web'),
-  ('framer', 'web'),
-  ('framer', 'animation'),
-  ('framer', 'prototype'),
-  ('linear', 'saas'),
-  ('linear', 'productivity'),
-  ('linear', 'web'),
-  ('notion', 'productivity'),
-  ('notion', 'collaboration'),
-  ('notion', 'saas'),
-  ('vercel', 'web'),
-  ('vercel', 'saas'),
-  ('github', 'open-source'),
-  ('github', 'collaboration'),
-  ('github', 'web'),
-  ('supabase', 'open-source'),
-  ('supabase', 'web'),
-  ('shadcn-ui', 'react'),
-  ('shadcn-ui', 'components'),
-  ('shadcn-ui', 'open-source'),
-  ('shadcn-ui', 'design-system'),
-  ('radix-ui', 'react'),
-  ('radix-ui', 'components'),
-  ('radix-ui', 'open-source'),
-  ('lucide', 'icons'),
-  ('lucide', 'open-source'),
-  ('lucide', 'free'),
-  ('react', 'react'),
-  ('react', 'open-source'),
-  ('react', 'web'),
-  ('react-aria', 'react'),
-  ('react-aria', 'components'),
-  ('react-aria', 'open-source'),
-  ('tailwind', 'css'),
-  ('tailwind', 'open-source'),
-  ('tailwind', 'web'),
-  ('webflow', 'web'),
-  ('webflow', 'saas'),
-  ('mobbin', 'mobile'),
-  ('mobbin', 'web'),
-  ('awwwards', 'web'),
-  ('arena', 'minimal'),
-  ('arena', 'research'),
-  ('raindrop', 'productivity'),
-  ('raindrop', 'web'),
-  ('savee', 'web'),
-  ('google-fonts', 'typography'),
-  ('google-fonts', 'free'),
-  ('google-fonts', 'web'),
-  ('fontshare', 'typography'),
-  ('fontshare', 'free'),
-  ('unsplash', 'photos'),
-  ('unsplash', 'free'),
-  ('coolors', 'color'),
-  ('coolors', 'web'),
-  ('coolors', 'free'),
-  ('nextjs', 'react'),
-  ('nextjs', 'web'),
-  ('nextjs', 'open-source'),
-  ('cursor', 'ai'),
-  ('cursor', 'productivity'),
-  ('claude', 'ai'),
-  ('claude', 'productivity'),
-  ('chatgpt', 'ai'),
-  ('chatgpt', 'productivity'),
-  ('v0', 'ai'),
-  ('v0', 'react'),
-  ('v0', 'components'),
-  ('midjourney', 'ai'),
-  ('midjourney', 'illustration'),
-  ('heroicons', 'icons'),
-  ('heroicons', 'open-source'),
-  ('heroicons', 'free'),
-  ('phosphor', 'icons'),
-  ('phosphor', 'open-source'),
-  ('phosphor', 'free'),
-  ('storybook', 'components'),
-  ('storybook', 'open-source'),
-  ('relume', 'web'),
-  ('relume', 'figma'),
-  ('relume', 'components'),
-  ('untitled-ui', 'figma'),
-  ('untitled-ui', 'design-system'),
-  ('inter', 'typography'),
-  ('inter', 'free'),
-  ('inter', 'open-source'),
-  ('geist', 'typography'),
-  ('geist', 'web'),
-  ('raycast', 'productivity'),
-  ('astro', 'web'),
-  ('astro', 'open-source'),
-  ('mdn', 'web'),
-  ('mdn', 'free'),
-  ('css-tricks', 'css'),
-  ('css-tricks', 'web')
-on conflict do nothing;
-
--- 6. Insert Collection Resources
+-- 4. Insert Collection Resources
 insert into public.collection_resources (collection_id, resource_id) values
   ('ui-tools', 'figma'),
   ('ui-tools', 'framer'),

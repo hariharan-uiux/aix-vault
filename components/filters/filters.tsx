@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { Badge } from "@/components/ui/badge";
 import { Popover, usePopover } from "@/components/ui/popover";
 import { Tooltip } from "@/components/ui/tooltip";
-import { categoryById, tags } from "@/lib/taxonomy";
+import { categoryById } from "@/lib/taxonomy";
 import { useVault } from "@/lib/vault/store";
 import { cn } from "@/lib/utils";
 import type { SortMode } from "@/types";
@@ -18,7 +18,6 @@ import {
   Palette,
   Search,
   SlidersHorizontal,
-  Tag,
   Type,
   X,
 } from "lucide-react";
@@ -207,7 +206,7 @@ export function PlatformToggle({ className }: { className?: string } = {}) {
 export const sorts: { id: SortMode; label: string }[] = [
   { id: "upvotes", label: "Most Upvoted" },
   { id: "recent", label: "Recently Added" },
-  { id: "name", label: "Name A–Z" },
+  { id: "name", label: "Name Aâ€“Z" },
 ];
 
 function TypeSelectDropdown({
@@ -397,201 +396,6 @@ function TypeSelectDropdown({
   );
 }
 
-function TagsSelectDropdown({
-  selectedTagIds,
-  onChange,
-}: {
-  selectedTagIds: string[];
-  onChange: (tagIds: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const selectedCount = selectedTagIds.length;
-
-  const currentLabel = useMemo(() => {
-    if (selectedCount === 0) return "All Tags";
-    if (selectedCount === 1) {
-      const tag = tags.find((t) => t.id === selectedTagIds[0]);
-      return tag ? tag.name : "1 tag selected";
-    }
-    return `${selectedCount} tags selected`;
-  }, [selectedTagIds, selectedCount]);
-
-  const filteredTags = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return tags;
-    return tags.filter((t) => t.name.toLowerCase().includes(q));
-  }, [query]);
-
-  // Click outside to collapse
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        setOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
-  // Reset query when closing and auto-focus
-  useEffect(() => {
-    if (open) {
-      requestAnimationFrame(() => {
-        searchInputRef.current?.focus();
-      });
-    } else {
-      setQuery("");
-    }
-  }, [open]);
-
-  const toggleTag = (id: string) => {
-    if (selectedTagIds.includes(id)) {
-      onChange(selectedTagIds.filter((tId) => tId !== id));
-    } else {
-      onChange([...selectedTagIds, id]);
-    }
-  };
-
-  return (
-    <div ref={containerRef} className="relative w-full">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className={cn(
-          "flex h-9 w-full items-center justify-between rounded-full border px-3.5 text-[12.5px] transition-colors cursor-pointer outline-none select-none",
-          selectedCount > 0
-            ? "border-orange-500/40 bg-orange-500/10 text-orange-600 dark:border-orange-400/40 dark:bg-orange-400/15 dark:text-orange-400 font-medium"
-            : "border-black/[0.08] dark:border-white/[0.12] bg-black/[0.03] dark:bg-white/[0.05] text-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.08]",
-          open && selectedCount === 0 && "border-black/20 dark:border-white/20 bg-black/[0.06] dark:bg-white/[0.08]",
-        )}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <div className="flex items-center gap-1.5 min-w-0 truncate">
-          <span className="truncate font-medium">{currentLabel}</span>
-          {selectedCount > 1 && (
-            <span className="shrink-0 flex size-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white">
-              {selectedCount}
-            </span>
-          )}
-        </div>
-        <ChevronDown
-          size={13}
-          className={cn(
-            "shrink-0 text-muted-foreground transition-transform duration-200",
-            open && "rotate-180 text-foreground",
-          )}
-        />
-      </button>
-
-      {open && (
-        <div
-          className="mt-1.5 w-full rounded-xl border border-black/[0.08] dark:border-white/[0.14] bg-background/95 dark:bg-[#18191e]/95 backdrop-blur-xl p-2 shadow-xl shadow-black/20 dark:shadow-black/60 animate-in fade-in-0 zoom-in-95 duration-150"
-          role="listbox"
-        >
-          {/* Search input with smooth pill container */}
-          <div className="p-0.5 pb-2">
-            <div className="flex items-center gap-2 rounded-full border border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] px-2.5 py-1.5 transition-colors focus-within:border-black/20 dark:focus-within:border-white/20">
-              <Search size={12} className="shrink-0 text-muted-foreground" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                name="tag-search"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search tags..."
-                style={{
-                  outline: "none",
-                  boxShadow: "none",
-                  border: "none",
-                }}
-                className="w-full bg-transparent text-[12px] text-foreground placeholder:text-muted-foreground outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 border-none p-0 m-0 shadow-none focus:shadow-none"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    searchInputRef.current?.focus();
-                  }}
-                  className="shrink-0 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer outline-none focus:outline-none"
-                  title="Clear"
-                >
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Tag Pills Container */}
-          <div className="max-h-36 overflow-y-auto overscroll-contain flex flex-wrap gap-1.5 p-1 no-scrollbar">
-            {filteredTags.length > 0 ? (
-              filteredTags.map((tag) => {
-                const active = selectedTagIds.includes(tag.id);
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => toggleTag(tag.id)}
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-[11.5px] transition-colors cursor-pointer select-none inline-flex items-center gap-1",
-                      active
-                        ? "border-orange-500/50 bg-orange-500/20 text-orange-700 dark:border-orange-400/50 dark:bg-orange-400/25 dark:text-orange-300 font-medium shadow-2xs"
-                        : "border-black/[0.08] dark:border-white/[0.1] bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-black/[0.06] dark:hover:bg-white/[0.1] hover:text-foreground",
-                    )}
-                  >
-                    <span>{tag.name}</span>
-                    {active && <Check size={11} className="shrink-0" />}
-                  </button>
-                );
-              })
-            ) : (
-              <div className="py-2.5 w-full text-center text-[11.5px] text-muted-foreground">
-                No tags found
-              </div>
-            )}
-          </div>
-
-          {selectedCount > 0 && (
-            <div className="pt-1.5 mt-1 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between px-1">
-              <span className="text-[10.5px] text-muted-foreground font-mono">
-                {selectedCount} selected
-              </span>
-              <button
-                type="button"
-                onClick={() => onChange([])}
-                className="text-[11px] text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
-              >
-                Clear all tags
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function FilterSortContent({
   onClose,
 }: {
@@ -602,7 +406,6 @@ export function FilterSortContent({
 
   const activeFilterCount =
     (filters.type ? 1 : 0) +
-    filters.tagIds.length +
     (filters.free ? 1 : 0);
 
   const isCustomSort = sort !== "upvotes";
@@ -693,29 +496,6 @@ export function FilterSortContent({
         />
       </div>
 
-      {/* Filter Section: Tags */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Tag size={11} />
-            Tags {filters.tagIds.length > 0 && `(${filters.tagIds.length})`}
-          </span>
-          {filters.tagIds.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setFilters({ ...filters, tagIds: [] })}
-              className="text-[10.5px] text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              Clear tags
-            </button>
-          )}
-        </div>
-        <TagsSelectDropdown
-          selectedTagIds={filters.tagIds}
-          onChange={(tagIds) => setFilters({ ...filters, tagIds })}
-        />
-      </div>
-
       {totalActiveCount > 0 && (
         <div className="pt-1 flex justify-end">
           <button
@@ -726,7 +506,6 @@ export function FilterSortContent({
                 free: null,
                 openSource: false,
                 hasUpvotes: false,
-                tagIds: [],
               });
               setSort("upvotes");
             }}
@@ -754,7 +533,6 @@ export function FilterSortPopover({
   const { filters, sort } = useVault();
   const activeFilterCount =
     (filters.type ? 1 : 0) +
-    filters.tagIds.length +
     (filters.free ? 1 : 0);
   const isCustomSort = sort !== "upvotes";
   const totalActiveCount = activeFilterCount + (isCustomSort ? 1 : 0);

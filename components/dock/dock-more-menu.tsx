@@ -35,7 +35,6 @@ export function DockMoreMenu() {
 
   const activeFilterCount =
     (filters.type ? 1 : 0) +
-    filters.tagIds.length +
     (filters.free ? 1 : 0) +
     (filters.openSource ? 1 : 0);
 

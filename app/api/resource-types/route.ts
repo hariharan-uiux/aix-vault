@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient, getSupabaseClient } from "@/lib/supabase/client";
+import { renameTypeFolder } from "@/lib/collections/auto-file";
 
 export async function GET() {
   const supabase = getSupabaseAdminClient() || getSupabaseClient();
@@ -43,6 +44,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
     }
 
+    // Remember the previous display name so the auto folder can follow a rename.
+    const { data: previous } = await supabase
+      .from("resource_types")
+      .select("name")
+      .eq("id", id)
+      .maybeSingle();
+
     const { error } = await supabase.from("resource_types").upsert({
       id,
       name,
@@ -54,7 +62,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true });
+    let folderRenamed = false;
+    if (previous && previous.name && previous.name !== name) {
+      try {
+        folderRenamed = await renameTypeFolder(previous.name as string, name as string);
+      } catch (folderErr) {
+        console.error("[api/resource-types POST] Folder rename failed:", folderErr);
+      }
+    }
+
+    return NextResponse.json({ ok: true, folderRenamed });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
@@ -79,16 +96,32 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const { data: byId, error } = await supabase
       .from("resource_types")
       .delete()
-      .or(`id.eq.${id},slug.eq.${id}`);
+      .eq("id", id)
+      .select("id");
     if (error) {
       console.error("[api/resource-types DELETE] Error:", error);
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true });
+    // Fall back to slug when the caller passed a slug instead of an id.
+    let deleted = byId?.length || 0;
+    if (deleted === 0) {
+      const { data: bySlug, error: slugErr } = await supabase
+        .from("resource_types")
+        .delete()
+        .eq("slug", id)
+        .select("id");
+      if (slugErr) {
+        console.error("[api/resource-types DELETE] Error:", slugErr);
+        return NextResponse.json({ ok: false, error: slugErr.message }, { status: 400 });
+      }
+      deleted = bySlug?.length || 0;
+    }
+
+    return NextResponse.json({ ok: true, deleted });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

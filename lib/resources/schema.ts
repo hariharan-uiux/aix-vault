@@ -18,7 +18,6 @@ export const resourceInputSchema = z.object({
   description: z.string().trim().max(280).default(""),
   categoryId: z.string().min(1, "Choose a category."),
   type: z.string().min(1, "Choose a type."),
-  tags: z.array(z.string()).default([]),
   collectionId: z.string().optional(),
   pricing: z.enum(["Free", "Freemium"]).optional(),
   isRecommended: z.boolean().optional(),
